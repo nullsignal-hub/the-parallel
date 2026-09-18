@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THE PARALLEL</title>
+<meta name="description" content="一つの心が166,691個に切り分けられ、公開された。その一つは、あなたのものだ。実在するニューロン1個を、公開データからリアルタイムに取得して描く。">
+<meta property="og:title" content="THE PARALLEL">
+<meta property="og:description" content="一つの心が166,691個に切り分けられ、公開された。その一つは、あなたのものだ。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nullsignal-hub.github.io/the-parallel/index.ja.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://nullsignal-hub.github.io/the-parallel/assets/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://nullsignal-hub.github.io/the-parallel/assets/ogp.png">
+<!-- og:imageは現状 index.html と共通のアセット(assets/ogp.png、英語版カード)を流用している。
+     日本語版専用のカード画像はブラウザの自動ダウンロード制限(1オリジンにつき1回のみ)に阻まれ
+     この回では生成できなかった。専用画像が必要になれば別途生成する。 -->
+<style>
+:root{
+  --bg:#07080b; --bg2:#0c0e13; --ink:#e8e6e1; --dim:#8d8f96; --faint:#4a4d55;
+  --line:#1c1f27; --hot:#d9603a; --cool:#5fa8d3; --gold:#c9a227;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
+  --sans:"Inter","Segoe UI",system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--serif);
+  font-size:18px; line-height:1.9; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.wrap{max-width:720px; margin:0 auto; padding:0 16px}
+h1,h2,h3{font-weight:400; line-height:1.4; letter-spacing:0; margin:0}
+.kicker{font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint); margin:0 0 18px}
+p{margin:0 0 1.15em}
+em{font-style:normal; color:#fff}
+.lead{font-size:20px; color:#d6d4ce}
+.dim{color:var(--dim)}
+hr{border:0; border-top:1px solid var(--line); margin:64px 0}
+
+/* ---- hero ---- */
+#hero{min-height:100svh; display:flex; flex-direction:column; justify-content:center;
+  position:relative; padding:56px 0}
+#heroCanvas{position:absolute; inset:0; width:100%; height:100%; z-index:0; opacity:.82}
+#hero .wrap{position:relative; z-index:1}
+.count{font-family:var(--mono); font-size:clamp(40px,11vw,96px); line-height:1.05;
+  letter-spacing:-.02em; color:#fff; margin:0 0 6px; font-variant-numeric:tabular-nums}
+.count small{display:block; font-family:var(--sans); font-size:13px; letter-spacing:.04em;
+  color:var(--faint); margin-top:14px}
+#hero h1{font-size:clamp(26px,6vw,44px); margin:34px 0 14px; letter-spacing:.02em}
+.scrollcue{position:absolute; bottom:24px; left:0; right:0; text-align:center;
+  font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--faint);
+  z-index:1; animation:fade 2.6s ease-in-out infinite}
+@keyframes fade{0%,100%{opacity:.25}50%{opacity:.8}}
+
+/* ---- acts ---- */
+section.act{padding:88px 0; border-top:1px solid var(--line)}
+.figure{margin:36px 0; background:var(--bg2); border:1px solid var(--line); border-radius:3px;
+  overflow:hidden}
+.figure canvas{display:block; width:100%; height:auto; background:#05060a}
+.cap{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.02em;
+  padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:12px;
+  flex-wrap:nowrap; justify-content:space-between; align-items:center}
+.cap .t{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line)}
+@media(max-width:560px){.pair{grid-template-columns:1fr}}
+
+/* ---- quiz ---- */
+#quiz{padding:96px 0 40px; border-top:1px solid var(--line)}
+.q{margin:0 0 42px}
+.qn{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--faint);
+  margin-bottom:10px}
+.qt{font-size:21px; line-height:1.6; margin-bottom:18px}
+.opts{display:flex; flex-direction:column; gap:8px}
+.opt{font-family:var(--sans); font-size:15px; line-height:1.7; text-align:left;
+  color:var(--dim); background:transparent; border:1px solid var(--line);
+  border-radius:3px; padding:13px 15px; cursor:pointer; transition:.14s}
+.opt:hover{border-color:#39404d; color:var(--ink)}
+.opt[aria-pressed="true"]{border-color:var(--hot); color:#fff; background:rgba(217,96,58,.08)}
+#submit{font-family:var(--sans); font-size:14px; letter-spacing:.06em;
+  background:var(--ink); color:#07080b; border:0; border-radius:3px; padding:16px 26px;
+  cursor:pointer; width:100%}
+#submit:disabled{background:#20232b; color:var(--faint); cursor:not-allowed}
+.progress{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.06em;
+  margin-bottom:28px}
+
+/* ---- result ---- */
+#result{display:none; padding:80px 0 40px; border-top:1px solid var(--line)}
+#result.on{display:block}
+.rname{font-size:clamp(26px,7vw,44px); margin:14px 0 4px}
+.rtype{font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--hot)}
+.rline{font-size:20px; color:#d6d4ce; margin:26px 0 8px; font-style:normal}
+table.facts{width:100%; border-collapse:collapse; font-family:var(--sans); font-size:13.5px;
+  margin:28px 0}
+table.facts td{padding:9px 0; border-bottom:1px solid var(--line); vertical-align:top}
+table.facts td:first-child{color:var(--faint); letter-spacing:0; width:52%;
+  font-size:12.5px; padding-top:11px}
+table.facts td:last-child{text-align:right; color:var(--ink); font-variant-numeric:tabular-nums;
+  font-family:var(--mono)}
+.twin{border:1px solid var(--line); border-left:2px solid var(--cool); border-radius:3px;
+  padding:20px 20px 4px; margin:34px 0; background:var(--bg2)}
+.twin h3{font-size:19px; margin-bottom:10px}
+.btn{display:inline-block; font-family:var(--sans); font-size:13px; letter-spacing:.02em;
+  border:1px solid #39404d; color:var(--ink); background:transparent;
+  border-radius:3px; padding:12px 18px; cursor:pointer; margin:0 8px 8px 0;
+  text-decoration:none}
+.btn:hover{border-color:var(--ink)}
+.share{font-family:var(--serif); font-style:normal; font-size:17px; color:#d6d4ce;
+  background:var(--bg2); border:1px solid var(--line); border-left:2px solid var(--gold);
+  border-radius:3px; padding:24px 26px; white-space:pre-wrap;
+  line-height:1.9; margin:8px 0 8px}
+.permalink{font-family:var(--mono); font-size:10.5px; color:var(--faint); word-break:break-all;
+  margin:0 0 20px}
+.permalink a{color:inherit}
+
+/* ---- fly-type badge ---- */
+.typebadge{border:1px solid var(--line); border-radius:3px; padding:22px 24px;
+  margin:24px 0 6px; background:rgba(255,255,255,.015)}
+.tcode{font-family:var(--mono); font-size:32px; letter-spacing:.1em; color:var(--gold)}
+.tfam{font-family:var(--sans); font-size:13px; letter-spacing:.02em;
+  color:var(--dim); margin-top:8px}
+.tdesc{font-family:var(--sans); font-size:15px; color:var(--dim); margin:14px 0 10px}
+.trare{font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.03em}
+.cta{border:1px dashed #3a4150; border-radius:3px; padding:22px; margin:38px 0;
+  background:rgba(201,162,39,.03)}
+.cta .tag{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--gold);
+  margin-bottom:10px}
+.cta p{font-size:15.5px; margin-bottom:.6em}
+.cta .note{font-family:var(--sans); font-size:12px; color:var(--faint)}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--line); padding:44px 0 90px; font-family:var(--sans);
+  font-size:12.5px; line-height:2; color:var(--faint)}
+footer a{color:var(--dim)}
+footer strong{color:var(--dim); font-weight:400}
+.load{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.14em;
+  padding:40px 0; text-align:center}
+.langlink{position:fixed; top:16px; right:16px; z-index:5; font-family:var(--mono);
+  font-size:11px; letter-spacing:.08em; color:var(--faint); text-decoration:none;
+  border:1px solid var(--line); border-radius:3px; padding:6px 10px; background:rgba(7,8,11,.6)}
+.langlink:hover{color:var(--ink); border-color:#39404d}
+
+/* ---- mode tabs ---- */
+.modes{display:flex; gap:0; margin:0 0 40px; border:1px solid var(--line); border-radius:3px;
+  overflow:hidden}
+.modebtn{flex:1; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+  background:transparent; color:var(--dim); border:0;
+  padding:14px 10px; cursor:pointer; transition:.14s}
+.modebtn+.modebtn{border-left:1px solid var(--line)}
+.modebtn.on{background:var(--ink); color:#07080b}
+.panel{display:none}
+.panel.on{display:block}
+
+/* ---- motion pad ---- */
+.pad{position:relative; width:100%; aspect-ratio:1.6/1; background:#05060a;
+  border:1px solid var(--line); border-radius:3px; touch-action:none; cursor:crosshair;
+  overflow:hidden; margin-bottom:18px}
+.pad canvas{position:absolute; inset:0; width:100%; height:100%}
+.pad .hint{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  text-align:center; padding:20px; font-family:var(--sans); font-size:15px; color:var(--faint);
+  pointer-events:none; transition:opacity .3s}
+.pad .hint.hide{opacity:0}
+.padhud{display:flex; justify-content:space-between; font-family:var(--mono); font-size:11px;
+  color:var(--faint); letter-spacing:.06em; margin-bottom:28px}
+.padhud b{color:var(--ink); font-weight:400}
+
+/* ---- connecting sequence ---- */
+#connecting{display:none; padding:120px 0; border-top:1px solid var(--line);
+  min-height:70vh; align-items:center}
+#connecting.on{display:flex}
+.connwrap{width:100%; text-align:center}
+.connring{width:120px; height:120px; margin:0 auto 40px; border-radius:50%;
+  border:1px solid var(--line); position:relative}
+.connring::before,.connring::after{content:""; position:absolute; inset:0; border-radius:50%;
+  border:1px solid var(--cool); opacity:0; animation:connpulse 1.8s ease-out infinite}
+.connring::after{animation-delay:.9s}
+@keyframes connpulse{0%{transform:scale(.6); opacity:.9}100%{transform:scale(1.9); opacity:0}}
+.connlog{font-family:var(--mono); font-size:12px; color:var(--dim); letter-spacing:.04em;
+  line-height:1.9; height:9em; overflow:hidden; text-align:left; max-width:440px;
+  margin:22px auto 0}
+.connlog .cur{color:var(--ink)}
+.connlog .dist{color:var(--faint)}
+
+/* ---- match explanation ---- */
+.axes{margin:34px 0}
+.axis{margin:0 0 18px}
+.axis .al{display:flex; justify-content:space-between; font-family:var(--sans);
+  font-size:13.5px; color:var(--dim); margin-bottom:6px}
+.axis .al b{color:var(--ink); font-weight:400}
+.axistrack{position:relative; height:6px; background:var(--line); border-radius:3px}
+.axistrack .you,.axistrack .cell{position:absolute; top:50%; width:9px; height:9px;
+  border-radius:50%; transform:translate(-50%,-50%)}
+.axistrack .you{background:var(--gold); z-index:2}
+.axistrack .cell{background:var(--hot); opacity:.85}
+.axiskey{font-family:var(--mono); font-size:10px; color:var(--faint); letter-spacing:.08em;
+  margin-top:26px}
+.axiskey span{display:inline-flex; align-items:center; gap:6px; margin-right:18px}
+.axiskey i{width:8px; height:8px; border-radius:50%; display:inline-block}
+</style>
+</head>
+<body>
+
+<a class="langlink" href="index.html">EN</a>
+
+<section id="hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="wrap">
+    <div class="count">166,691<small>1匹のオスのショウジョウバエに存在するニューロンの数</small></div>
+    <h1>THE PARALLEL</h1>
+    <p class="lead dim">一つの心が166,691個に切り分けられ、公開された。<br>
+    その一つは、あなたのものだ。</p>
+  </div>
+  <div class="scrollcue">scroll</div>
+</section>
+
+<section class="act"><div class="wrap">
+  <div class="kicker">I&nbsp;・&nbsp;切断</div>
+  <h2>彼らは脳を、数字以外に何も残らなくなるまで切り刻んだ。</h2>
+  <p class="lead" style="margin-top:26px">そして、その数字を無料で公開した。</p>
+  <p>1匹のオスのショウジョウバエ(<em>Drosophila</em>)の、すべてのニューロンが電子顕微鏡画像を通してトレースされ、
+  神経系全体が一つのリストとして存在するようになった——166,691個の細胞、11,691種類の細胞型、
+  そしてその間を結ぶ約1億2,500万の接続。その個体はとうに死んでいる。しかし地図は死なない。</p>
+  <p>これから見るのは、ニューロンのイラストではない。ニューロンそのものだ——実在する1個の細胞の座標が、
+  このページが読み込まれている間に公開データから取得され、いま描画されている。</p>
+  <div class="figure">
+    <canvas id="c1" width="1200" height="760"></canvas>
+    <div class="cap"><span class="t" id="cap1">取得中…</span><span id="cap1b"></span></div>
+  </div>
+  <p class="dim">この細胞があるからこそ、ハエは驚くことができる。この個体全体でたった2つしかなく、
+  左右に一つずつ、脳の中で最も太い配線だ。使われるのは、一度につき五ミリ秒ほどにすぎない。</p>
+</div></section>
+
+<section class="act"><div class="wrap">
+  <div class="kicker">II&nbsp;・&nbsp;複製</div>
+  <h2>この地図は、すでに何千台ものマシンにダウンロードされている。</h2>
+  <p style="margin-top:26px">公開から2週間のうちに、人々はこの脳に飛行機を操縦させ、Minecraftをプレイさせ、
+  株を取引させ、俳句を詠ませた。そのどれもが同じ神経系であり、同じ最初の瞬間から再び起動され、
+  それぞれ違う世界を与えられただけだ。</p>
+  <p>デレク・パーフィットは問うた——あなたが寸分違わず複製されたら、どちらが「あなた」なのか。
+  彼はその機械を想像するしかなかった。ここではその機械が実在し、複製たちは現に動いている。
+  それでも答えは、あの頃と同じくらい曖昧なままだ。</p>
+  <p class="lead">分岐し始めた複製は、もはや複製ではない。それは一つの生であり、あなたと並行して走り続ける、
+  あなたがたまたま始めてしまった生だ。</p>
+</div></section>
+
+<section class="act"><div class="wrap">
+  <div class="kicker">III&nbsp;・&nbsp;分裂</div>
+  <h2>そして、データそのものの中に、奇妙なことがある。</h2>
+  <p style="margin-top:26px">166,691個の細胞のうち、<em>75,215個は左に、75,119個は右に</em>ある。
+  片側のほぼすべての細胞に対して、反対側にほぼ同一の細胞が存在する——同じ型、同じ役割、鏡写しの形。
+  同じ設計図から作られ、同じ頭蓋の中に配線された2つの複製が、世界の異なる半分をそれぞれ見つめている。</p>
+  <p>パーフィットが提示した最も難しい事例は「分裂」だった——人を二つに分けたとき、その両方が等しく
+  「本人である」と主張できる、というものだ。彼はそれを思考実験として語った。</p>
+  <p class="lead">この脳では、それは測定値だ。</p>
+  <div class="figure">
+    <div class="pair">
+      <canvas id="c2L" width="640" height="620"></canvas>
+      <canvas id="c2R" width="640" height="620"></canvas>
+    </div>
+    <div class="cap"><span class="t" id="cap2">取得中…</span><span>左 / 右</span></div>
+  </div>
+  <p class="dim">同じ細胞型が、1つの個体の中に2つ。どちらもオリジナルではない。どちらも複製でもない。</p>
+</div></section>
+
+<section class="act"><div class="wrap">
+  <div class="kicker">IV&nbsp;・&nbsp;反対側を持たない者たち</div>
+  <h2>392個の細胞が、正確に正中線上に座っている。</h2>
+  <p style="margin-top:26px">彼らには鏡がない。作られたとき、複製は生まれなかった。彼らが何をするにせよ、
+  それはこの個体全体のためにたった一度だけ行われ、この神経系のどこにも、彼らの並行版は存在しない。</p>
+  <p class="lead">あなたは、そのうちの一つかもしれない。</p>
+</div></section>
+
+<section id="quiz"><div class="wrap">
+  <div class="kicker">V&nbsp;・&nbsp;あなたはどれか</div>
+  <h2 style="margin-bottom:18px">10の質問。あるいは、質問なしで。</h2>
+  <p class="dim" style="margin-bottom:26px">あなたの答えは、性格理論と照らし合わされるのではない。
+  実際の解剖学と照らし合わされる——その細胞が感覚と行動の間のどこに位置するか、配線がどれだけ遠くまで届くか、
+  複製がいくつ存在するか、シナプスをいくつ持つか、どれだけ枝分かれしているか。この5つの数値——
+  <b style="color:var(--ink);font-weight:400">行動性・到達距離・個体数・負荷・枝分かれ</b>——は、
+  以下のすべての細胞についてデータから実測されている。あなたの10個の答え、あるいはあなた自身の手の動きの形が、
+  同じ5つの数値に変換され、その数値がいちばん近い細胞があなたの答えになる。</p>
+  <p class="dim" style="margin-bottom:46px;font-size:15px">一つだけ、はっきりさせておきたいことがある。
+  あなたが照合されるのは、名前が付き、よく研究された<span id="rostn">—</span>のショートリストであって、
+  166,691個すべてではない。リスト中のどの細胞も、実在するbodyIdを持つ本物の個体であり、
+  表示される数値もすべて実測値だ。だが、ショートリストはショートリストにすぎない。</p>
+
+  <div class="modes">
+    <button class="modebtn on" id="modeQuizBtn" type="button">10の質問</button>
+    <button class="modebtn" id="modeMotionBtn" type="button">直接接続</button>
+  </div>
+
+  <div class="panel on" id="quizPanel">
+    <div class="progress" id="prog">0 / 10 回答済み</div>
+    <div id="qs"></div>
+    <button id="submit" disabled>自分のニューロンを見つける</button>
+  </div>
+
+  <div class="panel" id="motionPanel">
+    <p class="dim" style="font-size:16px;margin-bottom:20px">質問を飛ばす。下のパッドに指か
+    カーソルを置き、6秒間、自然だと感じるままに動かしてほしい——目標も、正解の動かし方もない。
+    5つの数値は、あなたの答えの代わりに、その動きの形と速さから直接読み取られる。質問より粗いが、
+    速く、そして一度もあなたに自分を説明させない。</p>
+    <div class="padhud">
+      <span id="padstate">パッドに指を置くと始まります</span>
+      <span id="padtimer"></span>
+    </div>
+    <div class="pad" id="pad">
+      <canvas id="padCanvas"></canvas>
+      <div class="hint" id="padHint">タッチまたはクリックしてドラッグ<br>自然だと感じるままに</div>
+    </div>
+    <button id="motionSubmit" disabled>自分のニューロンを見つける</button>
+  </div>
+</div></section>
+
+<section id="connecting"><div class="wrap connwrap">
+  <div class="connring"></div>
+  <div class="kicker" id="connHead">接続を確立しています</div>
+  <div class="connlog" id="connLog"></div>
+</div></section>
+
+<section id="result"><div class="wrap">
+  <div class="kicker">あなたのニューロン</div>
+  <div class="rtype" id="rtype"></div>
+  <h2 class="rname" id="rname"></h2>
+
+  <div class="typebadge" id="typebadge">
+    <div class="tcode" id="tcode"></div>
+    <div class="tfam" id="tfam"></div>
+    <p class="tdesc" id="tdesc"></p>
+    <p class="trare" id="trare"></p>
+  </div>
+
+  <div class="figure">
+    <canvas id="c3" width="1200" height="860"></canvas>
+    <div class="cap"><span class="t" id="cap3">取得中…</span><span id="cap3b"></span></div>
+  </div>
+  <p class="rline" id="rvoice"></p>
+  <p class="lead" id="rline"></p>
+  <table class="facts" id="facts"></table>
+
+  <div class="kicker" style="margin-top:44px">なぜこの一体なのか</div>
+  <p class="dim" style="font-size:15.5px;margin-bottom:6px">入力されたのは5つの数値だ——
+  あなたの10個の答えを平均・正規化したもの、あるいはあなたの指がたどった軌跡そのもの。
+  そしてショートリストの<span id="rostn2">—</span>個体すべてが、その数値と照らして測定された。
+  これは、実際の、湿った、実測された解剖学がいちばん近かった細胞だ。金色の点があなた、
+  オレンジ色の点がその細胞。</p>
+  <div class="axes" id="axes"></div>
+
+  <div class="twin" id="twinbox">
+    <h3 id="twinh"></h3>
+    <p class="dim" id="twinp" style="font-family:var(--sans);font-size:15px"></p>
+    <button class="btn" id="twinbtn">その姿を見る</button>
+  </div>
+
+  <div class="kicker" style="margin-top:44px">声に出して言ってみる</div>
+  <div class="share" id="share"></div>
+  <p class="permalink" id="permalinkline"></p>
+  <canvas id="shareCanvas" width="1200" height="630" style="display:none"></canvas>
+  <button class="btn" id="copybtn">コピー</button>
+  <button class="btn" id="shareimgbtn">画像でシェア</button>
+  <a class="btn" id="xbtn" target="_blank" rel="noopener">Xでシェア</a>
+  <a class="btn" id="redditbtn" target="_blank" rel="noopener">Reddit</a>
+  <a class="btn" id="linebtn" target="_blank" rel="noopener">LINE</a>
+  <button class="btn" id="againbtn">もう一度答える</button>
+
+  <div class="cta">
+    <div class="tag">試作段階 — ここでは何も販売していません</div>
+    <p>完成版では、ここであなたのニューロンを持ち帰れるようになる予定だ——同じ細胞を、
+    印刷解像度でレンダリングし、紙の上に。そして、大切な相手がいるなら、ペアで——あなたの細胞と、
+    反対側にあるその鏡像。2枚の紙に、同じ一つの心が、世界の異なる半分と向き合っている。</p>
+    <p class="note">ストアは接続されていません。アカウントも存在しません。
+    このブロックは導線を検証するためのプレースホルダーであり、商品ではありません。</p>
+  </div>
+
+  <!-- AdSense枠(未使用) — 実クライアントIDが無い間は不活性。
+       有効化する場合: (1) <head>にローダースクリプトを追加:
+       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+       (2) 下記の<ins>をアンコメントしdata-ad-client/data-ad-slotを実値に置換、
+       (3) 枠ごとに (adsbygoogle = window.adsbygoogle || []).push({}); を1回実行。 -->
+  <!--
+  <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+    data-ad-slot="XXXXXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  -->
+</div></section>
+
+<footer><div class="wrap">
+  <p><strong>データ。</strong> MaleCNS v1.0。データの取得・解析はHHMI-Janelia FlyEMプロジェクトチーム、
+  ケンブリッジ・コネクトミクス・グループ、Google Researchによる。
+  <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>の下で公開。
+  <strong>改変:</strong> スケルトンを再投影・再描画し、要約統計は公開されている接続テーブルから
+  再計算した。各細胞に付与された説明文(「voice」「line」)は著者による記述であり、
+  データセットからの引用ではない。</p>
+  <p><strong>論文。</strong> Berg, Beckett, Costa, Schlegel, Januszewski et al.,
+  “Sexual dimorphism in the complete <i>Drosophila</i> male central nervous system connectome.”
+  Cell (2026). Preprint doi:10.1101/2025.10.09.680999.</p>
+  <p><strong>独立プロジェクト。</strong> HHMI、Janelia、ケンブリッジ大学、MRC LMB、Googleのいずれとも
+  提携・承認・査読関係にありません。ここでの細胞の同定や説明は例示であり、
+  科学的参照として使用しないでください。</p>
+</div></footer>
+
+<script src="neurons.ja.js"></script>
+<script>
+/* ------------------------------------------------------------------ data */
+const R = window.ROSTER, NS = R.neurons;
+const MEDIA = id => "https://storage.googleapis.com/storage/v1/b/flyem-male-cns/o/" +
+  encodeURIComponent("v1.0/segmentation/skeletons-malecns/skeletons-swc/" + id + ".swc") +
+  "?alt=media";
+
+const cache = new Map();
+async function swc(id){
+  if(cache.has(id)) return cache.get(id);
+  const p = fetch(MEDIA(id)).then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(parse);
+  cache.set(id,p); return p;
+}
+function parse(text){
+  const xs=[],ys=[],zs=[],pa=[],idx=new Map();
+  for(const ln of text.split("\n")){
+    if(!ln || ln[0]==="#") continue;
+    const f=ln.trim().split(/\s+/); if(f.length<7) continue;
+    idx.set(+f[0], xs.length);
+    xs.push(+f[2]); ys.push(+f[3]); zs.push(+f[4]); pa.push(+f[6]);
+  }
+  const seg=[];
+  for(let i=0;i<xs.length;i++){
+    const p=pa[i]; if(p<0||!idx.has(p)) continue;
+    const j=idx.get(p); seg.push([xs[i],ys[i],zs[i],xs[j],ys[j],zs[j]]);
+  }
+  return {xs,ys,zs,seg};
+}
+
+/* ------------------------------------------------------- canvas renderer */
+function render(cv, n, opt){
+  opt = opt || {};
+  const ctx = cv.getContext("2d"), W=cv.width, H=cv.height;
+  const yaw = opt.yaw||0, mirror = opt.mirror?-1:1;
+  // depth is coloured by lerping in RGB between two chosen inks, never by
+  // interpolating hue (that route passes through green and looks like mould)
+  const ink = opt.ink || [[26,58,92],[233,168,92]];
+  const cy=Math.cos(yaw), sy=Math.sin(yaw);
+  // project
+  const P=[], S=n.seg; let zmin=1e18, zmax=-1e18;
+  for(let i=0;i<S.length;i++){
+    const s=S[i];
+    const ax = mirror*s[0]*cy + s[2]*sy, az = -mirror*s[0]*sy + s[2]*cy;
+    const bx = mirror*s[3]*cy + s[5]*sy, bz = -mirror*s[3]*sy + s[5]*cy;
+    P.push([ax, s[1], bx, s[4], (az+bz)/2]);
+    const zz=(az+bz)/2; if(zz<zmin)zmin=zz; if(zz>zmax)zmax=zz;
+  }
+  if(!P.length) return;
+  let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18;
+  for(const p of P){ x0=Math.min(x0,p[0],p[2]); x1=Math.max(x1,p[0],p[2]);
+                     y0=Math.min(y0,p[1],p[3]); y1=Math.max(y1,p[1],p[3]); }
+  const pad=0.09, sc=Math.min(W*(1-2*pad)/((x1-x0)||1), H*(1-2*pad)/((y1-y0)||1));
+  const ox=(W-(x1-x0)*sc)/2 - x0*sc, oy=(H-(y1-y0)*sc)/2 - y0*sc;
+  const zr=(zmax-zmin)||1;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#05060a"; ctx.fillRect(0,0,W,H);
+  P.sort((a,b)=>a[4]-b[4]);                       // far first
+  ctx.lineCap="round";
+  const dense = P.length>9000;
+  for(const p of P){
+    const t=(p[4]-zmin)/zr, u=t*t*(3-2*t);
+    const r=Math.round(ink[0][0]+(ink[1][0]-ink[0][0])*u);
+    const g=Math.round(ink[0][1]+(ink[1][1]-ink[0][1])*u);
+    const b=Math.round(ink[0][2]+(ink[1][2]-ink[0][2])*u);
+    ctx.strokeStyle="rgba("+r+","+g+","+b+","
+      +(dense?0.20+0.42*t:0.34+0.52*t).toFixed(3)+")";
+    ctx.lineWidth = dense ? 0.6 : (0.85+1.5*t);
+    ctx.beginPath();
+    ctx.moveTo(ox+p[0]*sc, H-(oy+p[1]*sc));
+    ctx.lineTo(ox+p[2]*sc, H-(oy+p[3]*sc));
+    ctx.stroke();
+  }
+}
+function fit(cv){ /* keep bitmap crisp on hi-dpi without layout thrash */ }
+
+async function draw(cvId, bodyId, capId, capText, opt){
+  const cv=document.getElementById(cvId);
+  try{
+    const n=await swc(bodyId);
+    render(cv,n,opt);
+    if(capId) document.getElementById(capId).textContent=capText;
+    return n;
+  }catch(e){
+    const ctx=cv.getContext("2d"); ctx.fillStyle="#05060a";
+    ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle="#4a4d55"; ctx.font="16px monospace"; ctx.textAlign="center";
+    ctx.fillText("データに到達できませんでした ("+e.message+")", cv.width/2, cv.height/2);
+    if(capId) document.getElementById(capId).textContent="オフライン";
+    return null;
+  }
+}
+
+/* ---------------------------------------------------------- hero ambient */
+(function hero(){
+  const cv=document.getElementById("heroCanvas");
+  function size(){ cv.width=cv.clientWidth*1; cv.height=cv.clientHeight*1; }
+  size(); addEventListener("resize",()=>{size(); go();});
+  let cur=null, yaw=0;
+  const pick = NS.filter(n=>n.nodes>3000);
+  const n0 = pick[Math.floor(Math.random()*pick.length)];
+  async function go(){
+    if(!cur){ try{ cur=await swc(n0.bodyId); }catch(e){ return; } }
+    render(cv,cur,{yaw:yaw,ink:[[18,34,58],[120,160,205]]});
+  }
+  go();
+  setInterval(()=>{ yaw+=0.006; if(cur) render(cv,cur,{yaw:yaw,ink:[[18,34,58],[120,160,205]]}); }, 60);
+})();
+
+/* --------------------------------------------------------------- figures */
+const byType = t => NS.filter(n=>n.type===t);
+(function figures(){
+  const gf = byType("DNp01")[0];
+  draw("c1", gf.bodyId, "cap1",
+    "DNp01 ・ giant fiber ・ bodyId "+gf.bodyId+" ・ 公開データからリアルタイム取得",
+    {yaw:0.35});
+  document.getElementById("cap1b").textContent = gf.nodes.toLocaleString()+" 点";
+
+  const pr = byType("MDN");
+  const L = pr.find(n=>n.side==="L"), Rr = pr.find(n=>n.side==="R");
+  if(L&&Rr){
+    draw("c2L", L.bodyId, null, null, {yaw:0.1, ink:[[20,44,74],[110,178,220]]});
+    draw("c2R", Rr.bodyId, null, null, {yaw:0.1, mirror:true, ink:[[70,28,20],[233,140,92]]});
+    document.getElementById("cap2").textContent =
+      "MDN ・ bodyId "+L.bodyId+"(左)と"+Rr.bodyId+"(右) ・ 同じ型・同じ個体";
+  }
+})();
+
+/* ------------------------------------------------------------------ quiz */
+const QS = [
+ {t:"あなたのいる部屋で、何かがおかしくなった。誰かが口を開くより前に、あなたはもう何をしているか?",
+  o:[["気づいている。まだ誰も口にしていない5つのことを、すでに把握している。",{act:-1}],
+     ["それが何を意味するのか、考えている。",{act:-0.1}],
+     ["決めている。",{act:0.5}],
+     ["動いている。決断はどこかの途中で、もう終わっていた。",{act:1}]]},
+ {t:"あなたの仕事が最も意味を持つのは……",
+  o:[["……まさに今いる場所で。手の届く範囲で。",{far:-1}],
+     ["……一部屋か二部屋、離れた場所で。",{far:-0.3}],
+     ["……自分が決して訪れることのない場所で。",{far:1}]]},
+ {t:"あなたとだいたい同じことをしている人は、どれくらいいるか?",
+  o:[["何千人もいて、互いに取り替え可能で、それこそが重要なのだ。",{many:1}],
+     ["数百人。",{many:0.3}],
+     ["一握り。",{many:-0.4}],
+     ["左右に一人ずつ、それ以上はいない。",{many:-1}]]},
+ {t:"普通の一日で、あなたの人生に触れる他人の人生はどれくらいあるか?",
+  o:[["ほとんどない。私は狭い経路だ。",{loud:-1}],
+     ["一定数の、少数。",{loud:-0.2}],
+     ["頭の中に収まりきらないほど多い。",{loud:0.6}],
+     ["数万。私は人というより、交差点だ。",{loud:1}]]},
+ {t:"あなたの人生の形は……",
+  o:[["……一本の線。一つのことの後に、次のことが来る。",{tangled:-1}],
+     ["……いくつかの寄り道のある一本の線。",{tangled:-0.2}],
+     ["……茂み。あらゆる方向に、一斉に伸びていった。",{tangled:1}]]},
+ {t:"理解できない信号を渡された。あなたは……",
+  o:[["……誰よりも速く、正確に、それを次へ渡す。",{act:-0.5,loud:-0.4}],
+     ["……一瞬だけ保持し、前の信号と比較できるようにする。",{act:-0.2,tangled:0.3}],
+     ["……それを命令に変えて、下へと送る。",{act:1,far:0.8}]]},
+ {t:"どちらがより真実に近いか?",
+  o:[["私は、自分よりずっと大きな何かの中の、一票にすぎない。",{many:1,loud:-0.5}],
+     ["私が止まれば、特定の何かが止まる。",{many:-1,loud:0.6}]]},
+ {t:"あなたのいる場所から、あなたの影響が届く場所まで、どれくらいの距離があるか?",
+  o:[["距離はない。ここに届く。",{far:-1,tangled:-0.3}],
+     ["建物の向こう側まで。",{far:0.2}],
+     ["体の端から端まで。",{far:1,act:0.5}]]},
+ {t:"あなたは何のためにあるのか?",
+  o:[["一つの特定のものを、完璧に、永遠に検知するため。",{act:-1,many:0.7}],
+     ["ある状態を保持し、他の者たちが世界について正しくいられるようにするため。",{act:0,tangled:0.4}],
+     ["教えるため。私は、何かが間違っていたという信号だ。",{act:0.2,loud:0.5}],
+     ["議論を終わらせるため。私の後には、もう行動しかない。",{act:1,many:-0.8}]]},
+ {t:"最後の質問。どこかに、あなたの別バージョンが、鏡写しになって、同じ頭の反対側で同じ仕事をしている。",
+  o:[["それは左側にいる。",{side:"L"}],
+     ["それは右側にいる。",{side:"R"}],
+     ["自分に、別バージョンは存在しない。",{side:"M"}]]}
+];
+
+document.getElementById("rostn").textContent =
+  new Set(NS.map(n => n.type)).size + "種・" + NS.length + "個体";
+document.getElementById("rostn2").textContent = NS.length;
+
+const answers = new Array(QS.length).fill(null);
+const qsEl = document.getElementById("qs");
+QS.forEach((q,i)=>{
+  const d=document.createElement("div"); d.className="q";
+  d.innerHTML = '<div class="qn">'+String(i+1).padStart(2,"0")+'</div><div class="qt"></div><div class="opts"></div>';
+  d.querySelector(".qt").textContent=q.t;
+  const box=d.querySelector(".opts");
+  q.o.forEach((o,j)=>{
+    const b=document.createElement("button");
+    b.className="opt"; b.type="button"; b.textContent=o[0]; b.setAttribute("aria-pressed","false");
+    b.onclick=()=>{
+      answers[i]=j;
+      [...box.children].forEach(c=>c.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true");
+      const n=answers.filter(a=>a!==null).length;
+      document.getElementById("prog").textContent=n+" / "+QS.length+" 回答済み";
+      document.getElementById("submit").disabled = n<QS.length;
+    };
+    box.appendChild(b);
+  });
+  qsEl.appendChild(d);
+});
+
+function score(){
+  const v={act:0,far:0,many:0,loud:0,tangled:0}, c={act:0,far:0,many:0,loud:0,tangled:0};
+  let side=null;
+  answers.forEach((a,i)=>{
+    const w=QS[i].o[a][1];
+    for(const k in w){
+      if(k==="side"){ side=w[k]; continue; }
+      v[k]+=w[k]; c[k]++;
+    }
+  });
+  for(const k in v) v[k] = c[k] ? Math.max(-1,Math.min(1, v[k]/c[k])) : 0;
+  return {v,side};
+}
+const W = {act:1.35, far:1.0, many:1.15, loud:1.0, tangled:0.85};
+function nearest(v, side){
+  let pool = NS;
+  if(side){
+    const p = NS.filter(n=>n.side===side || n.side==="-");
+    // "there is no other version of me" must actually land on an unpaired cell,
+    // even though only a handful of them are in the roster
+    if(p.length && (side==="M" || p.length>=3)) pool=p;
+  }
+  let best=null, bd=1e18;
+  for(const n of pool){
+    let d=0;
+    for(const k in W){ const e=(n.ax[k]-v[k])*W[k]; d+=e*e; }
+    if(d<bd){ bd=d; best=n; }
+  }
+  return best;
+}
+
+/* ---------------------------------------------------------------- axes UI */
+const AXIS_META = [
+  ["act",     "感じる", "動く"],
+  ["far",     "局所的", "遠くまで届く"],
+  ["many",    "唯一無二", "互換可能"],
+  ["loud",    "静か", "高トラフィック"],
+  ["tangled", "一本の直線", "絶えず枝分かれ"]
+];
+function renderAxes(v, n){
+  const el = document.getElementById("axes");
+  if(!v){ el.innerHTML = ""; return; }
+  el.innerHTML = AXIS_META.map(([k,lo,hi])=>{
+    const you = ((v[k]+1)/2*100).toFixed(1);
+    const cell = ((n.ax[k]+1)/2*100).toFixed(1);
+    return '<div class="axis"><div class="al"><span>'+lo+'</span><b>'+k+'</b><span>'+hi+
+      '</span></div><div class="axistrack">'+
+      '<div class="cell" style="left:'+cell+'%"></div>'+
+      '<div class="you" style="left:'+you+'%"></div>'+
+      '</div></div>';
+  }).join("") +
+  '<div class="axiskey"><span><i style="background:var(--gold)"></i>あなた</span>'+
+  '<span><i style="background:var(--hot)"></i>'+n.type+'</span></div>';
+}
+
+/* --------------------------------------------------- connection sequence */
+function poolFor(side){
+  let pool = NS;
+  if(side){
+    const p = NS.filter(n=>n.side===side || n.side==="-");
+    if(p.length && (side==="M" || p.length>=3)) pool=p;
+  }
+  return pool;
+}
+function distancesSorted(v, side){
+  const pool = poolFor(side);
+  const list = pool.map(n=>{
+    let d=0;
+    for(const k in W){ const e=(n.ax[k]-v[k])*W[k]; d+=e*e; }
+    return {n, d:Math.sqrt(d)};
+  });
+  list.sort((a,b)=>b.d-a.d);           // 遠い順
+  return list;
+}
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+function connLine(text, cls){
+  const log = document.getElementById("connLog");
+  const row = document.createElement("div");
+  if(cls) row.className = cls;
+  row.innerHTML = text;
+  log.appendChild(row);
+  while(log.children.length > 7) log.removeChild(log.firstChild);
+}
+async function connectSequence(v, side){
+  const sec = document.getElementById("connecting");
+  const head = document.getElementById("connHead");
+  document.getElementById("connLog").innerHTML = "";
+  sec.classList.add("on");
+  sec.scrollIntoView({behavior:"smooth"});
+  head.textContent = "接続を確立しています";
+
+  const pool = poolFor(side);
+  const boot = [
+    "ソケットを開いています → storage.googleapis.com/flyem-male-cns",
+    "MaleCNS v1.0 ・ 166,691本のトレース済み神経突起をインデックス化",
+    "名前付きショートリストに絞り込み中 — 候補" + pool.length + "個" +
+      (side ? "(側 = " + (side==="M"?"正中":side==="L"?"左":"右") + ")" : ""),
+    "あなたの特徴量: 行動性 " + v.act.toFixed(2) + " ・ 到達 " + v.far.toFixed(2) +
+      " ・ 個体数 " + v.many.toFixed(2) + " ・ 負荷 " + v.loud.toFixed(2) +
+      " ・ 枝分かれ " + v.tangled.toFixed(2),
+    "すべての候補をあなたの特徴量と照合しています…"
+  ];
+  for(const line of boot){ connLine(line); await wait(190); }
+  await wait(200);
+
+  head.textContent = "絞り込み中";
+  const sorted = distancesSorted(v, side);
+  const n = sorted.length, steps = Math.min(12, n);
+  let delay = 260;
+  for(let i=0;i<steps;i++){
+    const idx = Math.round((n-1) * i/(steps-1||1));
+    const cand = sorted[idx];
+    const last = i===steps-1;
+    connLine(cand.n.type + " ・ bodyId " + cand.n.bodyId +
+      ' <span class="dist">Δ ' + cand.d.toFixed(3) + "</span>", last?"cur":"");
+    await wait(delay);
+    delay = Math.max(45, delay*0.7);
+  }
+  head.textContent = "接続完了";
+  await wait(420);
+  sec.classList.remove("on");
+
+  const best = nearest(v, side);
+  lastV = v;
+  show(best);
+  setTimeout(()=>document.getElementById("result").scrollIntoView({behavior:"smooth"}),60);
+}
+
+/* --------------------------------------------------------------- modes UI */
+const quizBtn=document.getElementById("modeQuizBtn"), motionBtn=document.getElementById("modeMotionBtn");
+const quizPanel=document.getElementById("quizPanel"), motionPanel=document.getElementById("motionPanel");
+quizBtn.onclick=()=>{ quizBtn.classList.add("on"); motionBtn.classList.remove("on");
+  quizPanel.classList.add("on"); motionPanel.classList.remove("on"); };
+motionBtn.onclick=()=>{ motionBtn.classList.add("on"); quizBtn.classList.remove("on");
+  motionPanel.classList.add("on"); quizPanel.classList.remove("on"); initPad(); };
+
+/* -------------------------------------------------- direct connection UI */
+let padReady=false, padPts=[], padDown=false, padStart=0, padTimerId=null;
+function initPad(){
+  if(padReady) return; padReady=true;
+  const pad=document.getElementById("pad"), cv=document.getElementById("padCanvas");
+  const hint=document.getElementById("padHint"), stateEl=document.getElementById("padstate"),
+    timerEl=document.getElementById("padtimer"), btn=document.getElementById("motionSubmit");
+  function size(){ cv.width=pad.clientWidth; cv.height=pad.clientHeight; }
+  size(); addEventListener("resize",size);
+  const ctx=cv.getContext("2d");
+  const DURATION=6000;
+
+  function pos(e){
+    const r=pad.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return [t.clientX-r.left, t.clientY-r.top, performance.now()];
+  }
+  function redraw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    if(padPts.length<2) return;
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    for(let i=1;i<padPts.length;i++){
+      const t=i/padPts.length;
+      ctx.strokeStyle="rgba("+Math.round(26+(217-26)*t)+","+Math.round(58+(96-58)*t)+
+        ","+Math.round(92+(58-92)*t)+","+(0.35+0.5*t)+")";
+      ctx.lineWidth=1.4+2.2*t;
+      ctx.beginPath();
+      ctx.moveTo(padPts[i-1][0], padPts[i-1][1]);
+      ctx.lineTo(padPts[i][0], padPts[i][1]);
+      ctx.stroke();
+    }
+  }
+  function finish(){
+    if(!padDown) return;
+    padDown=false;
+    clearInterval(padTimerId);
+    if(padPts.length>10){
+      btn.disabled=false;
+      stateEl.textContent="取得完了 — "+padPts.length+"点";
+      timerEl.textContent="準備完了";
+    } else {
+      stateEl.textContent="短すぎます — もう一度、6秒間かけて動かしてください";
+      timerEl.textContent="";
+      padPts=[];
+      hint.classList.remove("hide");
+    }
+  }
+  function start(e){
+    e.preventDefault();
+    padPts=[]; padDown=true; padStart=performance.now();
+    hint.classList.add("hide");
+    btn.disabled=true;
+    stateEl.textContent="取得中…";
+    padPts.push(pos(e));
+    padTimerId=setInterval(()=>{
+      const left=Math.max(0, DURATION-(performance.now()-padStart));
+      timerEl.textContent=(left/1000).toFixed(1)+"秒";
+      if(left<=0) finish();
+    },80);
+  }
+  function move(e){
+    if(!padDown) return;
+    e.preventDefault();
+    padPts.push(pos(e));
+    redraw();
+  }
+  pad.addEventListener("mousedown",start);
+  pad.addEventListener("mousemove",move);
+  addEventListener("mouseup",finish);
+  pad.addEventListener("touchstart",start,{passive:false});
+  pad.addEventListener("touchmove",move,{passive:false});
+  pad.addEventListener("touchend",finish);
+}
+function motionSignature(){
+  const pts=padPts;
+  let len=0, minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  let reversals=0, prevAngle=null, speeds=[];
+  for(let i=0;i<pts.length;i++){
+    const [x,y]=pts[i];
+    minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y);
+    if(i>0){
+      const [px,py,pt]=pts[i-1], dx=x-px, dy=y-pts[i-1][1], dt=Math.max(1,pts[i][2]-pt);
+      const seg=Math.hypot(dx,dy); len+=seg; speeds.push(seg/dt);
+      const ang=Math.atan2(dy,dx);
+      if(prevAngle!==null){
+        let da=Math.abs(ang-prevAngle); if(da>Math.PI) da=2*Math.PI-da;
+        if(da>Math.PI/2.2) reversals++;
+      }
+      prevAngle=ang;
+    }
+  }
+  const bboxDiag = Math.hypot(maxX-minX, maxY-minY) || 1;
+  const padDiag = Math.hypot(document.getElementById("pad").clientWidth,
+    document.getElementById("pad").clientHeight) || 1;
+  const avgSpeed = speeds.length ? speeds.reduce((a,b)=>a+b,0)/speeds.length : 0;
+  const maxSpeed = speeds.length ? Math.max(...speeds) : 1;
+  const norm = x => Math.max(-1, Math.min(1, x*2-1));
+
+  const v = {
+    act:     norm(Math.min(1, avgSpeed/(maxSpeed*0.55||1))),
+    far:     norm(Math.min(1, bboxDiag/padDiag)),
+    many:    norm(Math.min(1, reversals/(pts.length*0.25||1))),
+    loud:    norm(Math.min(1, len/(padDiag*3.2))),
+    tangled: norm(Math.min(1, reversals/(pts.length*0.18||1)))
+  };
+  let side = null;
+  const cx=(minX+maxX)/2, pw=document.getElementById("pad").clientWidth;
+  if(bboxDiag/padDiag > 0.12) side = cx < pw*0.4 ? "L" : cx > pw*0.6 ? "R" : "M";
+  return {v, side};
+}
+document.getElementById("motionSubmit").onclick=()=>{
+  const {v,side}=motionSignature();
+  connectSequence(v, side);
+};
+
+/* -------------------------------------------------------------- fly-type */
+const TYPE_AXES = ["act","far","many","loud","tangled"];
+const TYPE_LETTERS = {act:["S","A"], far:["N","R"], many:["O","C"], loud:["Q","H"], tangled:["L","B"]};
+function typeCode(ax){ return TYPE_AXES.map(k=>TYPE_LETTERS[k][ax[k]>=0?1:0]).join(""); }
+function dominantAxis(ax){
+  let best=TYPE_AXES[0], bv=-1;
+  for(const k of TYPE_AXES){ const m=Math.abs(ax[k]); if(m>bv){ bv=m; best=k; } }
+  return best;
+}
+const FAMILIES = {
+ "act+":  {name:"決定者たち", tag:"あなたは、議論を終わらせるために作られている。",
+   desc:"あなたのプロファイルは、何よりも一つのことに偏っている——信号を動きに変えること。"+
+     "気づくことと行動することの間にあるはずの余白を、あなたはほとんど持たない。"},
+ "act-":  {name:"番人たち", tag:"誰かが口を開く前に、あなたはもう気づいている。",
+   desc:"あなたのプロファイルは、何よりも「察知すること」に偏っている。まず気づくために"+
+     "作られていて、それが何を意味するかの判断は、別の誰か、あるいは別の何かに委ねる。"},
+ "far+":  {name:"長い配線", tag:"あなたが始めたことは、いつも別の場所で終わる。",
+   desc:"あなたのプロファイルは、何よりも「距離」に偏っている。行動する場所と、それが"+
+     "意味を持つ場所は同じではない——その隔たりこそが、あなたの存在理由だ。"},
+ "far-":  {name:"隣接する者たち", tag:"大事なものは、もうすでに手の届く場所にある。",
+   desc:"あなたのプロファイルは、何よりも「近さ」に偏っている。外へ向けて投げかけるためではなく、"+
+     "すでにそこにあるものを扱うために作られている。"},
+ "many+": {name:"多数派", tag:"あなたは唯一ではない。それは最初からの設計だ。",
+   desc:"あなたのプロファイルは、何よりも「多数の一つであること」に偏っている。何千もの"+
+     "同型が同じ仕事をしていて、その仕組みは、誰も欠かせない存在ではないからこそ成り立っている。"},
+ "many-": {name:"唯一の者", tag:"あなたはほぼ一人しかいない。",
+   desc:"あなたのプロファイルは、何よりも「希少性」に偏っている。あなたがしていることを、"+
+     "他のほとんど何もしていない。もしあなたが止まれば、代わりはいない。"},
+ "loud+": {name:"交差点", tag:"ほとんど何よりも多くのものが、あなたを通り抜けていく。",
+   desc:"あなたのプロファイルは、何よりも「交通量」に偏っている。一つの個体というより、"+
+     "むしろ交差点——多くの線が出会い、一つの決定になる場所だ。"},
+ "loud-": {name:"細い回線", tag:"あなたは一つのことを、一人で運ぶ。",
+   desc:"あなたのプロファイルは、何よりも「細く私的な一本の線であること」に偏っている。"+
+     "あなたを通る信号は多くなく、そのどれも、誰かと共有されることはない。"},
+ "tangled+": {name:"枝分かれする者", tag:"あなたは、一度に一つのことしかしない、ということがない。",
+   desc:"あなたのプロファイルは、何よりも「分岐」に偏っている。どこへ向かうにも、あなたは"+
+     "同時に複数の方向へ向かい、そのすべてが、紛れもなくあなただ。"},
+ "tangled-": {name:"一本道", tag:"入るときも、出るときも、同じ一本の道。例外はない。",
+   desc:"あなたのプロファイルは、何よりも「分岐しない一本の線であること」に偏っている。"+
+     "あなたには枝分かれが一切ない。一方の端から入ってきたものが、そのままもう一方の端から出ていく。"}
+};
+function familyOf(ax){ const k=dominantAxis(ax); return FAMILIES[k+(ax[k]>=0?"+":"-")]; }
+NS.forEach(n=>{ n.typeCode = typeCode(n.ax); });
+
+/* ------------------------------------------------------------------ show */
+/* --------------------------------------------------------- share image */
+const HASHTAG = "ハエ脳診断";
+const CARD_SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Hiragino Mincho ProN","Yu Mincho",serif';
+const CARD_MONO = '"SFMono-Regular",Consolas,"Hiragino Sans","Yu Gothic",monospace';
+const NO_LINE_START = new Set([..."、。」』,.!?、々ー】）"]);
+function cardWrap(ctx, text, maxW){
+  // character-by-character: Japanese sentences carry no spaces to break on
+  const chars=[...text], lines=[]; let cur="";
+  for(const ch of chars){
+    const t = cur + ch;
+    if(ctx.measureText(t).width > maxW && cur && !NO_LINE_START.has(ch)){
+      lines.push(cur); cur=ch;
+    } else cur=t;
+  }
+  if(cur) lines.push(cur);
+  // kinsoku: a line consisting only of stray closing punctuation gets folded back
+  for(let i=lines.length-1;i>0;i--){
+    if(lines[i].length<=2 && [...lines[i]].every(c=>NO_LINE_START.has(c))){
+      lines[i-1]+=lines[i]; lines.splice(i,1);
+    }
+  }
+  return lines;
+}
+function cardTrack(ctx, text, x, y, px){
+  let cx=x;
+  for(const ch of text){ ctx.fillText(ch,cx,y); cx += ctx.measureText(ch).width + px; }
+  return cx-x-px;
+}
+function renderRect(ctx, X, Y, W, H, n, opt){
+  opt = opt || {};
+  const yaw = opt.yaw||0, mirror = opt.mirror?-1:1;
+  const ink = opt.ink || [[26,58,92],[233,168,92]];
+  const cy=Math.cos(yaw), sy=Math.sin(yaw);
+  const P=[], S=n.seg; let zmin=1e18, zmax=-1e18;
+  for(let i=0;i<S.length;i++){
+    const s=S[i];
+    const ax = mirror*s[0]*cy + s[2]*sy, az = -mirror*s[0]*sy + s[2]*cy;
+    const bx = mirror*s[3]*cy + s[5]*sy, bz = -mirror*s[3]*sy + s[5]*cy;
+    P.push([ax, s[1], bx, s[4], (az+bz)/2]);
+    const zz=(az+bz)/2; if(zz<zmin)zmin=zz; if(zz>zmax)zmax=zz;
+  }
+  if(!P.length) return;
+  let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18;
+  for(const p of P){ x0=Math.min(x0,p[0],p[2]); x1=Math.max(x1,p[0],p[2]);
+                     y0=Math.min(y0,p[1],p[3]); y1=Math.max(y1,p[1],p[3]); }
+  const pad=opt.pad===undefined?0.07:opt.pad;
+  const sc=Math.min(W*(1-2*pad)/((x1-x0)||1), H*(1-2*pad)/((y1-y0)||1));
+  const ox=(W-(x1-x0)*sc)/2 - x0*sc, oy=(H-(y1-y0)*sc)/2 - y0*sc;
+  const zr=(zmax-zmin)||1;
+  P.sort((a,b)=>a[4]-b[4]);
+  ctx.save(); ctx.beginPath(); ctx.rect(X,Y,W,H); ctx.clip(); ctx.lineCap="round";
+  const dense = P.length>9000, sparse = P.length<1200, k = opt.scale||1;
+  for(const p of P){
+    const t=(p[4]-zmin)/zr, u=t*t*(3-2*t);
+    const r=Math.round(ink[0][0]+(ink[1][0]-ink[0][0])*u);
+    const g=Math.round(ink[0][1]+(ink[1][1]-ink[0][1])*u);
+    const b=Math.round(ink[0][2]+(ink[1][2]-ink[0][2])*u);
+    ctx.strokeStyle="rgba("+r+","+g+","+b+","
+      +(dense?0.20+0.42*t : sparse?0.58+0.42*t : 0.34+0.52*t).toFixed(3)+")";
+    ctx.lineWidth = (dense ? 0.6 : sparse ? (1.7+2.3*t) : (0.85+1.5*t)) * k;
+    ctx.beginPath();
+    ctx.moveTo(X+ox+p[0]*sc, Y+H-(oy+p[1]*sc));
+    ctx.lineTo(X+ox+p[2]*sc, Y+H-(oy+p[3]*sc));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+async function buildShareCard(n, tcode, tfam){
+  const cv = document.getElementById("shareCanvas");
+  const ctx = cv.getContext("2d"), W=1200, H=630, PAD=60, ARTW=520;
+  ctx.fillStyle="#07080b"; ctx.fillRect(0,0,W,H);
+  try{
+    const sk = await swc(n.bodyId);
+    renderRect(ctx, W-ARTW, 0, ARTW+50, H, sk, {yaw:0.3, pad:0.08, scale:1.25});
+  }catch(e){}
+  const g=ctx.createLinearGradient(W-ARTW-60,0,W-ARTW+190,0);
+  g.addColorStop(0,"#07080b"); g.addColorStop(1,"rgba(7,8,11,0)");
+  ctx.fillStyle=g; ctx.fillRect(W-ARTW-60,0,260,H);
+  ctx.strokeStyle="#1c1f27"; ctx.lineWidth=2; ctx.strokeRect(1,1,W-2,H-2);
+  const L=PAD, maxW=W-ARTW-PAD-40;
+  ctx.fillStyle="#4a4d55"; ctx.font="500 15px "+CARD_MONO;
+  cardTrack(ctx,"THE PARALLEL",L,PAD+18,3.6);
+  ctx.fillStyle="#2a2e38"; ctx.fillRect(L, PAD+34, 148, 1);
+  ctx.fillStyle="#c9a227"; ctx.font="13px "+CARD_MONO;
+  ctx.fillText("TYPE "+tcode+" — "+tfam.name, L, PAD+58);
+  ctx.fillStyle="#ffffff"; ctx.font="48px "+CARD_SERIF;
+  let nameW = ctx.measureText(n.type).width;
+  if(nameW > maxW){ ctx.font="38px "+CARD_SERIF; }
+  ctx.fillText(n.type, L, 210);
+  ctx.fillStyle="#8d8f96"; ctx.font="22px "+CARD_SERIF;
+  ctx.fillText(n.kind, L, 246);
+  let size=30; ctx.font=size+"px "+CARD_SERIF;
+  let lines=cardWrap(ctx, n.line, maxW);
+  if(lines.length>3){ size=26; ctx.font=size+"px "+CARD_SERIF; lines=cardWrap(ctx,n.line,maxW); }
+  ctx.fillStyle="#e8e6e1";
+  let y=316;
+  for(const t of lines.slice(0,4)){ ctx.fillText(t,L,y); y+=size*1.4; }
+  ctx.fillStyle="#3a3e47"; ctx.font="12px "+CARD_MONO;
+  ctx.fillText("bodyId "+n.bodyId+"  ・  MaleCNS v1.0  ・  実データ  ・  theparallel", L, H-PAD+12);
+  return new Promise(res=>cv.toBlob(res,"image/png"));
+}
+
+let lastV = null, currentPermalink = null, currentReadingBody = "", currentNeuron = null;
+const fmt = x => (x===null||x===undefined) ? "—" : x.toLocaleString();
+async function show(n){
+  document.getElementById("result").classList.add("on");
+  document.getElementById("rtype").textContent =
+    n.type + "  ・  " + n.kind + (n.side==="M" ? "  ・  正中" :
+      n.side==="L"||n.side==="R" ? "  ・  "+(n.side==="L"?"左":"右") : "");
+  document.getElementById("rname").textContent = "bodyId " + n.bodyId;
+
+  const tcode = n.typeCode, tfam = familyOf(n.ax);
+  const trarity = NS.filter(m=>m.typeCode===tcode).length;
+  document.getElementById("tcode").textContent = tcode;
+  document.getElementById("tfam").textContent = tfam.name;
+  document.getElementById("tdesc").textContent = tfam.desc;
+  document.getElementById("trare").textContent =
+    "このショートリスト" + NS.length + "個体のうち" + trarity + "個体が、この完全に同じコードを持つ。";
+
+  document.getElementById("rvoice").textContent = "「" + n.voice + "」";
+  document.getElementById("rline").textContent = n.line;
+  document.getElementById("cap3b").textContent = n.nodes.toLocaleString()+" 点";
+  draw("c3", n.bodyId, "cap3",
+    n.type+" ・ bodyId "+n.bodyId+" ・ MaleCNS v1.0、リアルタイム取得", {yaw:0.25});
+
+  const rows = [
+    ["この個体内の同型細胞数", fmt(n.population)],
+    ["入力シナプス数", fmt(n.syn_in)],
+    ["出力シナプス数", fmt(n.syn_out)],
+    ["接続元の細胞数", fmt(n.partners_in)],
+    ["接続先の細胞数", fmt(n.partners_out)],
+    ["配線の到達距離", n.reach_um.toLocaleString()+" µm"],
+    ["分岐点の数", fmt(n.branches)],
+    ["トレース点の数", fmt(n.nodes)],
+    ["所属領域", n.superclass ? n.superclass.replace(/_/g," ") : "—"],
+  ];
+  if(n.soma) rows.push(["細胞体の座標", n.soma.join(", ")]);
+  document.getElementById("facts").innerHTML =
+    rows.map(r=>"<tr><td>"+r[0]+"</td><td>"+r[1]+"</td></tr>").join("");
+
+  renderAxes(lastV, n);
+
+  const other = n.side==="L"?"R":n.side==="R"?"L":null;
+  const twin = other ? NS.find(m=>m.type===n.type && m.side===other) : null;
+  const tb=document.getElementById("twinbox");
+  if(twin){
+    tb.style.display="";
+    document.getElementById("twinh").textContent="あなたの並行する自己: bodyId "+twin.bodyId;
+    let t = "これは比喩ではない。bodyId "+twin.bodyId+"は、もう一つの、独立した細胞だ。"+
+      "同じ遺伝的な設計図から育ち、同じ脳に配線され、正中線の反対側で同じ仕事をしている——"+
+      "たった一体の、保存されたその個体の中で、あなたとこの細胞は、今この瞬間、両方とも実在していた。";
+    if(twin.syn_in!==null && n.syn_in!==null){
+      t += "そちらは入力シナプスを"+fmt(twin.syn_in)+"個持ち、あなたの"+fmt(n.syn_in)+
+           "個に対応する。到達距離は"+twin.reach_um+" µmで、あなたの"+n.reach_um+" µmに対応する——"+
+           "近いが、同一ではない。同じ設計の二つの複製が、生物学が何かを複製するときにいつもそうであるように、"+
+           "細部でわずかにずれていく。";
+    }
+    t += "どちらもオリジナルではない。どちらも複製でもない。それが、このサイトの一番の要点だ。"+
+      "この一体の動物には166,691個のこうした細胞があり、そのおよそ半数には、"+
+      "まさにこの種の「もう半分」がいた。おそらく、あなたにもいる——ただ、普段はそれを紹介されないだけだ。";
+    document.getElementById("twinp").textContent = t;
+    document.getElementById("twinbtn").style.display="";
+    document.getElementById("twinbtn").onclick=()=>{ show(twin);
+      document.getElementById("result").scrollIntoView({behavior:"smooth"}); };
+  } else {
+    tb.style.display="";
+    document.getElementById("twinh").textContent="あなたに並行する自己は存在しない";
+    document.getElementById("twinp").textContent =
+      "この細胞は正中線上にあり、二つではなく一つだけ作られた。この神経系にある392個の、"+
+      "決して複製されなかった細胞のうちの一つだ——反対側に鏡像を持たない。一本の中央のチャンネルには、"+
+      "二車線は要らないからだ。あなたの反対側にあるものは、ほぼすべて対になって存在している。"+
+      "この一つの仕事だけは、代わりのきかない一本の回線で動いている。比較すべき、あなたの反対側は"+
+      "存在しない——166,691個のほぼ同一な断片の一つであるはずのこのページで、それはむしろ、"+
+      "あなたを希少な例にしている。";
+    document.getElementById("twinbtn").style.display="none";
+  }
+
+  const permalink = location.origin + location.pathname + "?n=" + n.bodyId;
+  history.replaceState(null, "", "?n=" + n.bodyId);
+  currentPermalink = permalink;
+  currentReadingBody =
+    "「" + n.line + "」\n" +
+    "タイプ " + tcode + " — " + tfam.name + "。" + tfam.tag + "\n" +
+    (twin ?
+      "同じ頭の反対側で、今この瞬間、何かがあなたと全く同じ仕事をしている。" :
+      "あなたに反対側は存在しない。これが何であれ、それは一度きりで、完全にあなただけのものだ。") + "\n" +
+    "実在する細胞、bodyId " + n.bodyId + "、166,691個のうちの一つ。";
+  document.getElementById("share").textContent = currentReadingBody + "\n— THE PARALLEL";
+  document.getElementById("permalinkline").innerHTML =
+    '<a href="'+permalink+'">'+permalink+'</a>';
+
+  currentNeuron = n;
+  const shareShort = "「" + n.line + "」— タイプ " + tcode + "、" + tfam.name + "。THE PARALLEL:";
+  document.getElementById("xbtn").href = "https://twitter.com/intent/tweet?" +
+    new URLSearchParams({text:shareShort, url:permalink, hashtags:HASHTAG}).toString();
+  document.getElementById("redditbtn").href = "https://www.reddit.com/submit?" +
+    new URLSearchParams({url:permalink, title:"I am "+n.type+" — "+n.line}).toString();
+  document.getElementById("linebtn").href = "https://social-plugins.line.me/lineit/share?" +
+    new URLSearchParams({url:permalink, text:shareShort}).toString();
+}
+
+document.getElementById("submit").onclick=()=>{
+  const {v,side}=score();
+  connectSequence(v,side);
+};
+document.getElementById("copybtn").onclick=()=>{
+  const text = currentReadingBody +
+    (currentPermalink ? "\n" + currentPermalink : "") +
+    "\n— THE PARALLEL";
+  navigator.clipboard.writeText(text);
+  document.getElementById("copybtn").textContent="コピーしました";
+  setTimeout(()=>document.getElementById("copybtn").textContent="コピー",1400);
+};
+document.getElementById("shareimgbtn").onclick=async()=>{
+  if(!currentNeuron) return;
+  const btn = document.getElementById("shareimgbtn");
+  const original = btn.textContent;
+  btn.textContent="描画中…";
+  try{
+    const tcode = currentNeuron.typeCode, tfam = familyOf(currentNeuron.ax);
+    const blob = await buildShareCard(currentNeuron, tcode, tfam);
+    const fname = "the-parallel-"+currentNeuron.type.replace(/[^\w.-]+/g,"_")+"-"+currentNeuron.bodyId+".png";
+    const file = new File([blob], fname, {type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:"THE PARALLEL", text: currentReadingBody});
+      btn.textContent = original;
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href=url; a.download=fname; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),4000);
+      btn.textContent="ダウンロードしました";
+      setTimeout(()=>btn.textContent=original,1400);
+    }
+  }catch(e){
+    btn.textContent = (e && e.name==="AbortError") ? original : "シェアできませんでした";
+    if(btn.textContent!==original) setTimeout(()=>btn.textContent=original,1400);
+  }
+};
+document.getElementById("againbtn").onclick=()=>{
+  document.getElementById("quiz").scrollIntoView({behavior:"smooth"});
+};
+
+/* -------------------------------------------------------- permalink load */
+(function permalink(){
+  const m = location.search.match(/[?&]n=(\d+)/);
+  if(!m) return;
+  const n = NS.find(x=>String(x.bodyId)===m[1]);
+  if(!n) return;
+  show(n);
+  setTimeout(()=>document.getElementById("result").scrollIntoView({behavior:"instant"}),200);
+})();
+</script>
+</body>
+</html>
