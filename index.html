@@ -129,6 +129,15 @@ table.facts td:last-child{text-align:right; color:var(--ink); font-variant-numer
   text-transform:uppercase; margin-bottom:10px}
 .cta p{font-size:16px; margin-bottom:.6em}
 .cta .note{font-family:var(--mono); font-size:11px; color:var(--faint)}
+.confirm-panel{display:none; margin-top:16px; padding:16px 18px; border:1px solid var(--gold);
+  border-radius:3px; background:rgba(201,162,39,.08)}
+.confirm-panel.show{display:block}
+.confirm-panel .head{font-family:var(--mono); font-size:12px; letter-spacing:.08em;
+  color:var(--gold); text-transform:uppercase; margin-bottom:8px}
+.confirm-panel p{font-size:14px; color:var(--ink); margin:0 0 6px}
+.confirm-panel p:last-child{margin-bottom:0}
+.confirm-panel.error{border-color:var(--hot); background:rgba(217,96,58,.08)}
+.confirm-panel.error .head{color:var(--hot)}
 
 /* ---- footer ---- */
 footer{border-top:1px solid var(--line); padding:44px 0 90px; font-family:var(--mono);
@@ -382,6 +391,10 @@ footer strong{color:var(--dim); font-weight:400}
     <p class="note" id="buyStatus">Ships in about a week. Fulfilled by hand, one
     print at a time — this is a small independent project, not a warehouse.</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
+    <div class="confirm-panel" id="confirmPanel">
+      <div class="head" id="confirmHead">Order confirmed</div>
+      <p id="confirmBody"></p>
+    </div>
   </div>
 
   <!-- AdSense placeholder — inert until a real client id exists.
@@ -931,8 +944,12 @@ function loadPaypalSdk(){
 async function renderBuyButton(n){
   const el = document.getElementById("paypal-button-container");
   const status = document.getElementById("buyStatus");
+  const panel = document.getElementById("confirmPanel");
+  const panelHead = document.getElementById("confirmHead");
+  const panelBody = document.getElementById("confirmBody");
   const defaultStatus = "Ships in about a week. Fulfilled by hand, one print at a time — this is a small independent project, not a warehouse.";
   status.textContent = defaultStatus;
+  panel.className = "confirm-panel";
   el.innerHTML = "";
   try{ await loadPaypalSdk(); }catch(e){ el.textContent = "(payment unavailable right now)"; return; }
   window.paypal.Buttons({
@@ -954,9 +971,16 @@ async function renderBuyButton(n){
       });
       const result = await res.json();
       if(res.ok && result.status === "COMPLETED"){
-        status.textContent = "Paid — bodyId " + n.bodyId + " is on its way. You'll hear from us by email about shipping.";
+        status.textContent = "";
+        panelHead.textContent = "Payment received";
+        panelBody.textContent = "Your print (bodyId " + n.bodyId + ") is already queued for printing and "
+          + "ships within about a week. PayPal will send you a payment receipt by email now — no further action needed.";
+        panel.className = "confirm-panel show";
       } else {
-        status.textContent = "Something went wrong confirming the payment. If you were charged, contact us — mention bodyId " + n.bodyId + ".";
+        panelHead.textContent = "Something went wrong";
+        panelBody.textContent = "We couldn't confirm the payment. If you were charged, please note bodyId "
+          + n.bodyId + " and the approximate time, and reach out so we can sort it out.";
+        panel.className = "confirm-panel show error";
       }
     },
     onError: () => { status.textContent = "Payment failed to start. Try again in a moment."; }
