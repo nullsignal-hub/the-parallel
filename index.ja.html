@@ -368,12 +368,13 @@ footer strong{color:var(--dim); font-weight:400}
   <button class="btn" id="againbtn">もう一度答える</button>
 
   <div class="cta">
-    <div class="tag">試作段階 — ここでは何も販売していません</div>
-    <p>完成版では、ここであなたのニューロンを持ち帰れるようになる予定だ——同じ細胞を、
-    印刷解像度でレンダリングし、紙の上に。そして、大切な相手がいるなら、ペアで——あなたの細胞と、
-    反対側にあるその鏡像。2枚の紙に、同じ一つの心が、世界の異なる半分と向き合っている。</p>
-    <p class="note">ストアは接続されていません。アカウントも存在しません。
-    このブロックは導線を検証するためのプレースホルダーであり、商品ではありません。</p>
+    <div class="tag">持ち帰る — ¥7,200</div>
+    <p>同じ細胞を、同じ実測データから、12インチ×12インチ・300dpiでレンダリングし、
+    マット紙に印刷してお届けします。模型ではありません——上に表示されているbodyIdそのものを、
+    このページが今取得したのと同じ公開データセットから描いたものです。</p>
+    <p class="note" id="buyStatus">発送まで1週間ほど。1枚ずつ手作業で対応しています——
+    倉庫のある会社ではなく、小さな個人プロジェクトです。</p>
+    <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
   </div>
 
   <!-- AdSense枠(未使用) — 実クライアントIDが無い間は不活性。
@@ -902,6 +903,60 @@ NS.forEach(n=>{ n.typeCode = typeCode(n.ax); });
 
 /* ------------------------------------------------------------------ show */
 /* --------------------------------------------------------- share image */
+/* ------------------------------------------------------------ checkout */
+// テスト中はsandbox認証情報。実際に課金する前に必ずPAYPAL_ENV="live"・
+// 本番のclient id・実際にデプロイしたworkerのURLに置き換えること。
+const PAYPAL_ENV = "sandbox";
+const PAYPAL_CLIENT_ID = "BAAMSIZFyAbzapk2m96WpQGjiEPMesOWnI3yjtlm5hi_oKwCWOZfB_VFFu2kT6v85ibv4pkmUWyLMtKSOM";
+const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
+
+let paypalSdkLoading = null;
+function loadPaypalSdk(){
+  if(window.paypal) return Promise.resolve();
+  if(paypalSdkLoading) return paypalSdkLoading;
+  paypalSdkLoading = new Promise((resolve, reject)=>{
+    const s = document.createElement("script");
+    s.src = "https://www.paypal.com/sdk/js?client-id=" + PAYPAL_CLIENT_ID + "&currency=JPY";
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return paypalSdkLoading;
+}
+async function renderBuyButton(n){
+  const el = document.getElementById("paypal-button-container");
+  const status = document.getElementById("buyStatus");
+  const defaultStatus = "発送まで1週間ほど。1枚ずつ手作業で対応しています——倉庫のある会社ではなく、小さな個人プロジェクトです。";
+  status.textContent = defaultStatus;
+  el.innerHTML = "";
+  try{ await loadPaypalSdk(); }catch(e){ el.textContent = "(現在お支払い機能を利用できません)"; return; }
+  window.paypal.Buttons({
+    style: { layout: "horizontal", color: "black", label: "pay", height: 40 },
+    createOrder: async () => {
+      const res = await fetch(WORKER_URL + "/create-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ bodyId: n.bodyId, type: n.type })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.id) throw new Error("order create failed");
+      return data.id;
+    },
+    onApprove: async (data) => {
+      status.textContent = "確認中…";
+      const res = await fetch(WORKER_URL + "/capture-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ orderID: data.orderID })
+      });
+      const result = await res.json();
+      if(res.ok && result.status === "COMPLETED"){
+        status.textContent = "お支払い完了 — bodyId " + n.bodyId + " を発送準備中です。発送についてメールでご連絡します。";
+      } else {
+        status.textContent = "決済の確認中に問題が発生しました。もし引き落としがあった場合はご連絡ください(bodyId " + n.bodyId + ")。";
+      }
+    },
+    onError: () => { status.textContent = "決済の開始に失敗しました。少し時間をおいて再度お試しください。"; }
+  }).render("#paypal-button-container");
+}
+
 const HASHTAG = "ハエ脳診断";
 const CARD_SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Hiragino Mincho ProN","Yu Mincho",serif';
 const CARD_MONO = '"SFMono-Regular",Consolas,"Hiragino Sans","Yu Gothic",monospace';
@@ -1100,6 +1155,7 @@ async function show(n){
     new URLSearchParams({url:permalink, title:"I am "+n.type+" — "+n.line}).toString();
   document.getElementById("linebtn").href = "https://social-plugins.line.me/lineit/share?" +
     new URLSearchParams({url:permalink, text:shareShort}).toString();
+  renderBuyButton(n);
 }
 
 document.getElementById("submit").onclick=()=>{

@@ -375,13 +375,13 @@ footer strong{color:var(--dim); font-weight:400}
   <button class="btn" id="againbtn">Answer again</button>
 
   <div class="cta">
-    <div class="tag">Prototype — nothing is for sale here</div>
-    <p>In the finished version this is where you would be able to take your neuron
-    away with you: the same cell, rendered at print resolution, on paper.
-    And if you have someone, the pair — your cell and its mirror on the other side,
-    two sheets, the same mind facing two different halves of the world.</p>
-    <p class="note">No store is connected. No account exists. This block is a placeholder
-    so the funnel can be evaluated, not a product.</p>
+    <div class="tag">Take it with you — ¥7,200</div>
+    <p>The same cell, rendered from the same real skeleton data, at 12″×12″,
+    300dpi, printed on matte paper and shipped to you. Not a mockup — the exact
+    bodyId above, drawn from the same public dataset the page just fetched.</p>
+    <p class="note" id="buyStatus">Ships in about a week. Fulfilled by hand, one
+    print at a time — this is a small independent project, not a warehouse.</p>
+    <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
   </div>
 
   <!-- AdSense placeholder — inert until a real client id exists.
@@ -908,6 +908,61 @@ const FAMILIES = {
 function familyOf(ax){ const k=dominantAxis(ax); return FAMILIES[k+(ax[k]>=0?"+":"-")]; }
 NS.forEach(n=>{ n.typeCode = typeCode(n.ax); });
 
+/* ------------------------------------------------------------ checkout */
+// Sandbox credentials during testing. Swap both for the live values before
+// this ever takes a real payment: PAYPAL_ENV="live", the live client id, and
+// the deployed worker's real URL.
+const PAYPAL_ENV = "sandbox";
+const PAYPAL_CLIENT_ID = "BAAMSIZFyAbzapk2m96WpQGjiEPMesOWnI3yjtlm5hi_oKwCWOZfB_VFFu2kT6v85ibv4pkmUWyLMtKSOM";
+const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
+
+let paypalSdkLoading = null;
+function loadPaypalSdk(){
+  if(window.paypal) return Promise.resolve();
+  if(paypalSdkLoading) return paypalSdkLoading;
+  paypalSdkLoading = new Promise((resolve, reject)=>{
+    const s = document.createElement("script");
+    s.src = "https://www.paypal.com/sdk/js?client-id=" + PAYPAL_CLIENT_ID + "&currency=JPY";
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return paypalSdkLoading;
+}
+async function renderBuyButton(n){
+  const el = document.getElementById("paypal-button-container");
+  const status = document.getElementById("buyStatus");
+  const defaultStatus = "Ships in about a week. Fulfilled by hand, one print at a time — this is a small independent project, not a warehouse.";
+  status.textContent = defaultStatus;
+  el.innerHTML = "";
+  try{ await loadPaypalSdk(); }catch(e){ el.textContent = "(payment unavailable right now)"; return; }
+  window.paypal.Buttons({
+    style: { layout: "horizontal", color: "black", label: "pay", height: 40 },
+    createOrder: async () => {
+      const res = await fetch(WORKER_URL + "/create-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ bodyId: n.bodyId, type: n.type })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.id) throw new Error("order create failed");
+      return data.id;
+    },
+    onApprove: async (data) => {
+      status.textContent = "Confirming…";
+      const res = await fetch(WORKER_URL + "/capture-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ orderID: data.orderID })
+      });
+      const result = await res.json();
+      if(res.ok && result.status === "COMPLETED"){
+        status.textContent = "Paid — bodyId " + n.bodyId + " is on its way. You'll hear from us by email about shipping.";
+      } else {
+        status.textContent = "Something went wrong confirming the payment. If you were charged, contact us — mention bodyId " + n.bodyId + ".";
+      }
+    },
+    onError: () => { status.textContent = "Payment failed to start. Try again in a moment."; }
+  }).render("#paypal-button-container");
+}
+
 /* --------------------------------------------------------- share image */
 const HASHTAG = "TheParallel";
 const CARD_SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif';
@@ -1101,6 +1156,7 @@ async function show(n){
     new URLSearchParams({url:permalink, title:"I am "+n.type+" — "+n.line}).toString();
   document.getElementById("linebtn").href = "https://social-plugins.line.me/lineit/share?" +
     new URLSearchParams({url:permalink, text:shareShort}).toString();
+  renderBuyButton(n);
 }
 
 document.getElementById("submit").onclick=()=>{
