@@ -1,0 +1,110 @@
+name: render-portrait
+
+# Triggered by the checkout Worker right after a "your neuron" portrait
+# purchase is captured. Renders the one deterministic neuron for the given
+# date, publishes it, and places a draft Printful order -- the seller still
+# clicks "Confirm" in the Printful dashboard (same safety policy as the rest
+# of the checkout).
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD the buyer entered"
+        required: true
+      order_id:
+        description: "PayPal order id (uniqueness key for the Printful order)"
+        required: true
+      recipient_b64:
+        description: "base64 JSON: {name,address1,address2,city,state_code,country_code,zip,email}"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  render-and-order:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r portrait-render/requirements.txt
+
+      - name: Validate date
+        run: |
+          python -c "import datetime,sys; datetime.date.fromisoformat(sys.argv[1])" "${{ github.event.inputs.date }}"
+
+      - name: Render portrait
+        working-directory: portrait-render
+        run: |
+          python portrait.py "${{ github.event.inputs.date }}" --style ink --print 12x16
+
+      - name: Publish with a random (non-guessable) filename
+        id: publish
+        run: |
+          TOKEN=$(python -c "import secrets; print(secrets.token_hex(12))")
+          SRC=$(ls portrait-render/out/portrait_*.png | head -1)
+          DEST="connectome-art-prints/po-$TOKEN.png"
+          mv "$SRC" "$DEST"
+          echo "dest=$DEST" >> "$GITHUB_OUTPUT"
+          echo "url=https://raw.githubusercontent.com/${{ github.repository }}/main/$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        run: |
+          git config user.name "portrait-render bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "${{ steps.publish.outputs.dest }}"
+          git commit -m "Render portrait for order ${{ github.event.inputs.order_id }}"
+          git push
+
+      - name: Wait for raw.githubusercontent.com to serve the file
+        run: |
+          URL="${{ steps.publish.outputs.url }}"
+          for i in $(seq 1 20); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$CODE" = "200" ]; then echo "ready after $i tries"; exit 0; fi
+            sleep 3
+          done
+          echo "file never became reachable at $URL" >&2
+          exit 1
+
+      - name: Create draft Printful order
+        env:
+          PRINTFUL_TOKEN: ${{ secrets.PRINTFUL_TOKEN }}
+          RECIPIENT_B64: ${{ github.event.inputs.recipient_b64 }}
+          ORDER_ID: ${{ github.event.inputs.order_id }}
+          FILE_URL: ${{ steps.publish.outputs.url }}
+        run: |
+          python - <<'PYEOF'
+          import base64, json, os, sys, urllib.request
+
+          recipient = json.loads(base64.b64decode(os.environ["RECIPIENT_B64"]))
+          order = {
+              "external_id": "portrait-" + os.environ["ORDER_ID"],
+              "recipient": recipient,
+              "items": [{
+                  "variant_id": 1349,
+                  "quantity": 1,
+                  "files": [{"type": "default", "url": os.environ["FILE_URL"]}],
+              }],
+          }
+          req = urllib.request.Request(
+              "https://api.printful.com/orders",
+              data=json.dumps(order).encode(),
+              headers={
+                  "Authorization": "Bearer " + os.environ["PRINTFUL_TOKEN"],
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  print(resp.read().decode())
+          except urllib.error.HTTPError as e:
+              print(e.read().decode(), file=sys.stderr)
+              raise
+          PYEOF
