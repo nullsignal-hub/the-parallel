@@ -95,6 +95,12 @@ a{color:#8fb8e8}
 <figure><img loading='lazy' src='out/portrait_20260918_ink.png' alt='portrait_20260918_ink.png'><figcaption><b>20260918_ink</b></figcaption></figure>
 <figure><img loading='lazy' src='out/portrait_20260919_ink.png' alt='portrait_20260919_ink.png'><figcaption><b>20260919_ink</b></figcaption></figure>
 </div>
+<div class="pair-buy" id="portraitBuy">
+  <div class="price">¥7,200</div>
+  <input type="date" id="portraitDate" style="font-size:14px;padding:6px 8px;margin-bottom:8px;display:block;background:#111;color:#e9e6e0;border:1px solid #2a2c30;border-radius:4px">
+  <div class="pp"></div>
+  <div class="confirm-panel"><b></b><span class="body"></span></div>
+</div>
 <h2>双子プリント(2枚組) — S6</h2>
 <p class='sub'>ひとつの脳の中に、同じ細胞が左右に1個ずつある。左半球の個体と右半球の個体を<b>同じ縮尺</b>で別々の紙に刷り、2枚組で売る。縮尺を共有するのが要点で、各々の紙に合わせて拡大すると「双子のあいだの唯一の実際の違い＝大きさが少し違うこと」が消えてしまう。<br>対応づけの根拠は3段階: <b>tier A</b>=注釈が同じ名前を左右に1個ずつ与えている(pool v1 で5,241組)、<b>tier B</b>=同じ名前が片側に複数あるので体細胞を正中面で反転して最近傍照合、<b>tier C</b>=細胞型が同じというだけ。<b>売り文句はtierに合わせること</b>——「同じ脳の左右にいる同じ細胞」はtier Aでは事実、tier Cでは推測。</p>
 <p class='sub'><b>DNp01 · blueprint</b></p>
@@ -238,6 +244,50 @@ async function mountBuy(designId, priceJPY, mount){
     onError: () => { ppEl.textContent = "Payment failed to start. Try again in a moment."; }
   }).render(ppEl);
 }
+
+async function mountPortraitBuy(mount){
+  const dateInput = mount.querySelector("#portraitDate");
+  const ppEl = mount.querySelector(".pp");
+  const panel = mount.querySelector(".confirm-panel");
+  const panelHead = panel.querySelector("b");
+  const panelBody = panel.querySelector(".body");
+  try{ await loadPaypalSdk(); }catch(e){ ppEl.textContent = "(payment unavailable right now)"; return; }
+  window.paypal.Buttons({
+    style: { layout: "horizontal", color: "black", label: "pay", height: 36 },
+    createOrder: async () => {
+      const date = dateInput.value;
+      if(!date){ throw new Error("no date entered"); }
+      const res = await fetch(WORKER_URL + "/create-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ product: "portrait", date })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.id) throw new Error("order create failed");
+      return data.id;
+    },
+    onApprove: async (data) => {
+      panel.className = "confirm-panel show";
+      panelHead.textContent = "Confirming…";
+      const res = await fetch(WORKER_URL + "/capture-order", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ orderID: data.orderID })
+      });
+      const result = await res.json();
+      if(res.ok && result.status === "COMPLETED"){
+        panelHead.textContent = "Payment received";
+        panelBody.textContent = "Rendering your neuron now — this takes about a minute, then it's "
+          + "automatically queued for printing. PayPal will email a receipt now.";
+        panel.className = "confirm-panel show";
+      } else {
+        panelHead.textContent = "Something went wrong";
+        panelBody.textContent = "Payment could not be confirmed.";
+        panel.className = "confirm-panel show error";
+      }
+    },
+    onError: () => { ppEl.textContent = "Payment failed to start. Try again in a moment."; }
+  }).render(ppEl);
+}
+mountPortraitBuy(document.getElementById("portraitBuy"));
 
 document.querySelectorAll("figure[data-design]").forEach(fig => {
   const designId = fig.getAttribute("data-design");
