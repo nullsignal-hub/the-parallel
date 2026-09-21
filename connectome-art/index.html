@@ -222,7 +222,7 @@ async function mountBuy(designId, priceJPY, mount){
     createOrder: async () => {
       const res = await fetch(WORKER_URL + "/create-order", {
         method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ product: "connectome-art", designId })
+        body: JSON.stringify({ product: "connectome-art", designId, lang: "ja" })
       });
       const data = await res.json();
       if(!res.ok || !data.id) throw new Error("order create failed");
@@ -382,7 +382,7 @@ async function mountPortraitBuy(mount){
       if(!date || !previewReady){ throw new Error("no confirmed preview for this date yet"); }
       const res = await fetch(WORKER_URL + "/create-order", {
         method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ product: "portrait", date })
+        body: JSON.stringify({ product: "portrait", date, lang: "ja" })
       });
       const data = await res.json();
       if(!res.ok || !data.id) throw new Error("order create failed");

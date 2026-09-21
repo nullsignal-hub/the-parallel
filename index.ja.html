@@ -951,7 +951,7 @@ async function renderBuyButton(n){
     createOrder: async () => {
       const res = await fetch(WORKER_URL + "/create-order", {
         method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ bodyId: n.bodyId, type: n.type })
+        body: JSON.stringify({ bodyId: n.bodyId, type: n.type, lang: "ja" })
       });
       const data = await res.json();
       if(!res.ok || !data.id) throw new Error("order create failed");
