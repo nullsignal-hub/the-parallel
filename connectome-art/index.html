@@ -238,7 +238,7 @@ async function mountBuy(designId, priceJPY, mount){
           panel.className = "confirm-panel show";
         } else {
           panelBody.textContent = "Payment confirmed for " + designId + ", but we couldn't automatically queue "
-            + "production (" + JSON.stringify(result.fulfillment) + "). We'll take care of it manually — no action needed from you.";
+            + "production. [DEBUG] " + JSON.stringify(result);
           panel.className = "confirm-panel show error";
         }
       } else {
@@ -286,13 +286,13 @@ async function mountPortraitBuy(mount){
             + "automatically queued for printing. PayPal will email a receipt now.";
           panel.className = "confirm-panel show";
         } else {
-          panelBody.textContent = "Payment confirmed, but we couldn't automatically start rendering "
-            + "(" + JSON.stringify(result.fulfillment) + "). We'll take care of it manually — no action needed from you.";
+          panelBody.textContent = "Payment confirmed, but we couldn't automatically start rendering. "
+            + "[DEBUG] " + JSON.stringify(result);
           panel.className = "confirm-panel show error";
         }
       } else {
         panelHead.textContent = "Something went wrong";
-        panelBody.textContent = "Payment could not be confirmed.";
+        panelBody.textContent = "Payment could not be confirmed. [DEBUG] " + JSON.stringify(result);
         panel.className = "confirm-panel show error";
       }
     },
