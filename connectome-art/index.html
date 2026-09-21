@@ -98,6 +98,11 @@ a{color:#8fb8e8}
 <div class="pair-buy" id="portraitBuy">
   <div class="price">¥7,200</div>
   <input type="date" id="portraitDate" style="font-size:14px;padding:6px 8px;margin-bottom:8px;display:block;background:#111;color:#e9e6e0;border:1px solid #2a2c30;border-radius:4px">
+  <div id="portraitPreviewWrap" style="display:none;margin-bottom:10px">
+    <canvas id="portraitPreviewCanvas" width="480" height="624" style="width:100%;max-width:320px;background:#f4f0e6;border-radius:4px;display:block"></canvas>
+    <p id="portraitPreviewCaption" style="font-size:12px;color:#9a958c;margin:6px 0 0"></p>
+  </div>
+  <p id="portraitPreviewStatus" style="font-size:12px;color:#9a958c;margin:0 0 10px"></p>
   <div class="pp"></div>
   <div class="confirm-panel"><b></b><span class="body"></span></div>
 </div>
@@ -238,7 +243,7 @@ async function mountBuy(designId, priceJPY, mount){
           panel.className = "confirm-panel show";
         } else {
           panelBody.textContent = "Payment confirmed for " + designId + ", but we couldn't automatically queue "
-            + "production. [DEBUG] " + JSON.stringify(result);
+            + "production. We'll take care of it manually — no action needed from you.";
           panel.className = "confirm-panel show error";
         }
       } else {
@@ -251,18 +256,130 @@ async function mountBuy(designId, priceJPY, mount){
   }).render(ppEl);
 }
 
+/* ------------------------------------------------ portrait preview */
+// Mirrors portrait.py's pick()/choose(): same hash, same pool, same
+// stub-rejection rule, so what the buyer previews here is what the
+// render-portrait workflow actually renders after payment. (It does not
+// replicate the family/outlier check, which needs the annotations feather
+// and only fires in rare merged-reconstruction cases -- an acceptable gap
+// for a pre-payment preview, not for the print itself.)
+const POOL_IDS_URL = "pool-v1-ids.json";
+const MIN_SEGMENTS = 120;
+const MAX_ATTEMPTS = 12;
+let poolIdsPromise = null;
+function loadPoolIds(){
+  if(!poolIdsPromise) poolIdsPromise = fetch(POOL_IDS_URL).then(r => r.json());
+  return poolIdsPromise;
+}
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return new Uint8Array(buf);
+}
+async function pickBodyId(dateStr, attempt, poolIds){
+  const bytes = await sha256Hex(dateStr + "#" + attempt);
+  let n = 0n;
+  for(let i = 0; i < 8; i++) n = (n << 8n) | BigInt(bytes[i]);
+  const idx = Number(n % BigInt(poolIds.length));
+  return poolIds[idx];
+}
+const swcCache = new Map();
+function parseSwc(text){
+  const xs=[],ys=[],zs=[],pa=[],idx=new Map();
+  for(const ln of text.split("\n")){
+    if(!ln || ln[0]==="#") continue;
+    const f=ln.trim().split(/\s+/); if(f.length<7) continue;
+    idx.set(+f[0], xs.length);
+    xs.push(+f[2]); ys.push(+f[3]); zs.push(+f[4]); pa.push(+f[6]);
+  }
+  const seg=[];
+  for(let i=0;i<xs.length;i++){
+    const p=pa[i]; if(p<0||!idx.has(p)) continue;
+    const j=idx.get(p); seg.push([xs[i],ys[i],zs[i],xs[j],ys[j],zs[j]]);
+  }
+  return seg;
+}
+async function fetchSwcSegments(bodyId){
+  if(swcCache.has(bodyId)) return swcCache.get(bodyId);
+  const url = "https://storage.googleapis.com/storage/v1/b/flyem-male-cns/o/" +
+    encodeURIComponent("v1.0/segmentation/skeletons-malecns/skeletons-swc/" + bodyId + ".swc") + "?alt=media";
+  const p = fetch(url).then(r => { if(!r.ok) throw new Error(String(r.status)); return r.text(); }).then(parseSwc);
+  swcCache.set(bodyId, p);
+  return p;
+}
+async function resolvePortraitNeuron(dateStr){
+  const poolIds = await loadPoolIds();
+  for(let attempt = 0; attempt < MAX_ATTEMPTS; attempt++){
+    const bodyId = await pickBodyId(dateStr, attempt, poolIds);
+    let seg;
+    try{ seg = await fetchSwcSegments(bodyId); }catch(e){ continue; }
+    if(seg.length >= MIN_SEGMENTS) return { bodyId, seg };
+  }
+  throw new Error("no printable neuron found for " + dateStr);
+}
+function renderPortraitPreview(canvas, seg){
+  const ctx = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+  const P = [];
+  for(const s of seg) P.push([s[0], s[1], s[3], s[4]]);
+  let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18;
+  for(const p of P){ x0=Math.min(x0,p[0],p[2]); x1=Math.max(x1,p[0],p[2]);
+                     y0=Math.min(y0,p[1],p[3]); y1=Math.max(y1,p[1],p[3]); }
+  const pad=0.10, sc=Math.min(W*(1-2*pad)/((x1-x0)||1), H*(1-2*pad)/((y1-y0)||1));
+  const ox=(W-(x1-x0)*sc)/2 - x0*sc, oy=(H-(y1-y0)*sc)/2 - y0*sc;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "#f4f0e6"; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = "rgba(179,50,31,0.85)"; ctx.lineWidth = 1.1; ctx.lineCap = "round";
+  ctx.beginPath();
+  for(const p of P){
+    ctx.moveTo(ox+p[0]*sc, H-(oy+p[1]*sc));
+    ctx.lineTo(ox+p[2]*sc, H-(oy+p[3]*sc));
+  }
+  ctx.stroke();
+}
+
 async function mountPortraitBuy(mount){
   const dateInput = mount.querySelector("#portraitDate");
+  const previewWrap = mount.querySelector("#portraitPreviewWrap");
+  const previewCanvas = mount.querySelector("#portraitPreviewCanvas");
+  const previewCaption = mount.querySelector("#portraitPreviewCaption");
+  const previewStatus = mount.querySelector("#portraitPreviewStatus");
   const ppEl = mount.querySelector(".pp");
   const panel = mount.querySelector(".confirm-panel");
   const panelHead = panel.querySelector("b");
   const panelBody = panel.querySelector(".body");
+  ppEl.style.display = "none";
+
+  let previewReady = false;
+  let previewToken = 0;
+  async function updatePreview(){
+    const date = dateInput.value;
+    const myToken = ++previewToken;
+    previewReady = false;
+    ppEl.style.display = "none";
+    previewWrap.style.display = "none";
+    if(!date){ previewStatus.textContent = ""; return; }
+    previewStatus.textContent = "この日付のニューロンを取得中…";
+    try{
+      const { bodyId, seg } = await resolvePortraitNeuron(date);
+      if(myToken !== previewToken) return; // a newer date was typed meanwhile
+      renderPortraitPreview(previewCanvas, seg);
+      previewCaption.textContent = "bodyId " + bodyId + " — この形がそのままポスターになります(購入後に生成される版もこれと同じ個体です)。";
+      previewWrap.style.display = "block";
+      previewStatus.textContent = "";
+      previewReady = true;
+      ppEl.style.display = "";
+    }catch(e){
+      if(myToken !== previewToken) return;
+      previewStatus.textContent = "この日付のプレビューを取得できませんでした(" + e.message + ")。別の日付をお試しください。";
+    }
+  }
+  dateInput.addEventListener("change", updatePreview);
+
   try{ await loadPaypalSdk(); }catch(e){ ppEl.textContent = "(payment unavailable right now)"; return; }
   window.paypal.Buttons({
     style: { layout: "horizontal", color: "black", label: "pay", height: 36 },
     createOrder: async () => {
       const date = dateInput.value;
-      if(!date){ throw new Error("no date entered"); }
+      if(!date || !previewReady){ throw new Error("no confirmed preview for this date yet"); }
       const res = await fetch(WORKER_URL + "/create-order", {
         method: "POST", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ product: "portrait", date })
@@ -287,12 +404,12 @@ async function mountPortraitBuy(mount){
           panel.className = "confirm-panel show";
         } else {
           panelBody.textContent = "Payment confirmed, but we couldn't automatically start rendering. "
-            + "[DEBUG] " + JSON.stringify(result);
+            + "We'll take care of it manually — no action needed from you.";
           panel.className = "confirm-panel show error";
         }
       } else {
         panelHead.textContent = "Something went wrong";
-        panelBody.textContent = "Payment could not be confirmed. [DEBUG] " + JSON.stringify(result);
+        panelBody.textContent = "Payment could not be confirmed.";
         panel.className = "confirm-panel show error";
       }
     },
