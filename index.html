@@ -973,9 +973,15 @@ async function renderBuyButton(n){
       if(res.ok && result.status === "COMPLETED"){
         status.textContent = "";
         panelHead.textContent = "Payment received";
-        panelBody.textContent = "Your print (bodyId " + n.bodyId + ") is already queued for printing and "
-          + "ships within about a week. PayPal will send you a payment receipt by email now — no further action needed.";
-        panel.className = "confirm-panel show";
+        if(result.fulfillment && result.fulfillment.draftOrderId){
+          panelBody.textContent = "Your print (bodyId " + n.bodyId + ") is already queued for printing and "
+            + "ships within about a week. PayPal will send you a payment receipt by email now — no further action needed.";
+          panel.className = "confirm-panel show";
+        } else {
+          panelBody.textContent = "Payment confirmed (bodyId " + n.bodyId + "), but we couldn't automatically queue "
+            + "production. We'll take care of it manually — no action needed from you.";
+          panel.className = "confirm-panel show error";
+        }
       } else {
         panelHead.textContent = "Something went wrong";
         panelBody.textContent = "We couldn't confirm the payment. If you were charged, please note bodyId "

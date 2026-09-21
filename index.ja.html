@@ -967,9 +967,15 @@ async function renderBuyButton(n){
       if(res.ok && result.status === "COMPLETED"){
         status.textContent = "";
         panelHead.textContent = "お支払い完了";
-        panelBody.textContent = "お使いのプリント(bodyId " + n.bodyId + ")はすでに印刷キューに入っており、"
-          + "1週間ほどで発送されます。PayPalからお支払いの領収書メールがすぐに届きます——追加の操作は不要です。";
-        panel.className = "confirm-panel show";
+        if(result.fulfillment && result.fulfillment.draftOrderId){
+          panelBody.textContent = "お使いのプリント(bodyId " + n.bodyId + ")はすでに印刷キューに入っており、"
+            + "1週間ほどで発送されます。PayPalからお支払いの領収書メールがすぐに届きます——追加の操作は不要です。";
+          panel.className = "confirm-panel show";
+        } else {
+          panelBody.textContent = "お支払いは完了しました(bodyId " + n.bodyId + ")が、印刷キューへの自動登録に"
+            + "失敗しました。こちらで手動対応します——追加の操作は不要です。";
+          panel.className = "confirm-panel show error";
+        }
       } else {
         panelHead.textContent = "問題が発生しました";
         panelBody.textContent = "決済の確認ができませんでした。もし引き落としがあった場合は、bodyId "
