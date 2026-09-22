@@ -301,7 +301,9 @@ footer strong{color:var(--dim); font-weight:400}
   <p class="dim" style="margin-bottom:46px;font-size:16px">One caveat, stated plainly:
   you are matched against a shortlist of <span id="rostn">—</span> named, well-studied
   cells, not against all 166,691. Every cell in the shortlist is a real individual with a
-  real bodyId, and every number you are shown is measured. But a shortlist is a shortlist.</p>
+  real bodyId — the dataset's own catalog number for that one cell, the same number you'll
+  see printed on your result and, if you order a print, on the poster itself — and every
+  number you are shown is measured. But a shortlist is a shortlist.</p>
 
   <div class="modes">
     <button class="modebtn on" id="modeQuizBtn" type="button">Ten questions</button>
@@ -342,6 +344,7 @@ footer strong{color:var(--dim); font-weight:400}
   <div class="kicker">Your neuron</div>
   <div class="rtype" id="rtype"></div>
   <h2 class="rname" id="rname"></h2>
+  <p class="dim" id="verifyLink" style="font-size:13px;margin:-6px 0 0"></p>
 
   <div class="typebadge" id="typebadge">
     <div class="tcode" id="tcode"></div>
@@ -391,6 +394,8 @@ footer strong{color:var(--dim); font-weight:400}
     <p class="note" id="buyStatus">Ships in 2-3 weeks. Fulfilled by hand, one
     print at a time — this is a small independent project, not a warehouse.</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
+    <p class="note" style="margin-top:8px;font-size:12px;opacity:.75">No PayPal account
+    needed — a debit/credit card option normally appears in the box above too.</p>
     <div class="confirm-panel" id="confirmPanel">
       <div class="head" id="confirmHead">Order confirmed</div>
       <p id="confirmBody"></p>
@@ -1090,6 +1095,9 @@ async function show(n){
     n.type + "  ·  " + n.kind + (n.side==="M" ? "  ·  midline" :
       n.side==="L"||n.side==="R" ? "  ·  "+(n.side==="L"?"left":"right") : "");
   document.getElementById("rname").textContent = "bodyId " + n.bodyId;
+  document.getElementById("verifyLink").innerHTML = 'Don\'t take our word for it — search bodyId <b>'
+    + n.bodyId + '</b> yourself on <a href="https://neuprint.janelia.org/?dataset=male-cns%3Av1.0&qt=findneurons" '
+    + 'target="_blank" rel="noopener">neuPrint</a>, Janelia\'s own public database for this dataset.';
 
   const tcode = n.typeCode, tfam = familyOf(n.ax);
   const trarity = NS.filter(m=>m.typeCode===tcode).length;

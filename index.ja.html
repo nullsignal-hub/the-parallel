@@ -294,8 +294,9 @@ footer strong{color:var(--dim); font-weight:400}
   同じ5つの数値に変換され、その数値がいちばん近い細胞があなたの答えになる。</p>
   <p class="dim" style="margin-bottom:46px;font-size:15px">一つだけ、はっきりさせておきたいことがある。
   あなたが照合されるのは、名前が付き、よく研究された<span id="rostn">—</span>のショートリストであって、
-  166,691個すべてではない。リスト中のどの細胞も、実在するbodyIdを持つ本物の個体であり、
-  表示される数値もすべて実測値だ。だが、ショートリストはショートリストにすぎない。</p>
+  166,691個すべてではない。リスト中のどの細胞も、実在するbodyId(データセット側がその一個の
+  細胞に付けた識別番号。あなたの結果画面や、印刷を注文した場合はポスター本体にも同じ番号が
+  刷られる)を持つ本物の個体であり、表示される数値もすべて実測値だ。だが、ショートリストはショートリストにすぎない。</p>
 
   <div class="modes">
     <button class="modebtn on" id="modeQuizBtn" type="button">10の質問</button>
@@ -335,6 +336,7 @@ footer strong{color:var(--dim); font-weight:400}
   <div class="kicker">あなたのニューロン</div>
   <div class="rtype" id="rtype"></div>
   <h2 class="rname" id="rname"></h2>
+  <p class="dim" id="verifyLink" style="font-size:13px;margin:-6px 0 0"></p>
 
   <div class="typebadge" id="typebadge">
     <div class="tcode" id="tcode"></div>
@@ -384,6 +386,8 @@ footer strong{color:var(--dim); font-weight:400}
     <p class="note" id="buyStatus">発送まで2〜3週間ほど。1枚ずつ手作業で対応しています——
     倉庫のある会社ではなく、小さな個人プロジェクトです。</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
+    <p class="note" style="margin-top:8px;font-size:12px;opacity:.75">PayPalアカウントが無くても、
+    上のボタン内にクレジットカード/デビットカードでのお支払いの選択肢が通常表示されます。</p>
     <div class="confirm-panel" id="confirmPanel">
       <div class="head" id="confirmHead">注文確定</div>
       <p id="confirmBody"></p>
@@ -1091,6 +1095,9 @@ async function show(n){
     n.type + "  ・  " + n.kind + (n.side==="M" ? "  ・  正中" :
       n.side==="L"||n.side==="R" ? "  ・  "+(n.side==="L"?"左":"右") : "");
   document.getElementById("rname").textContent = "bodyId " + n.bodyId;
+  document.getElementById("verifyLink").innerHTML = 'こちらの言葉を鵜呑みにせず、bodyId <b>'
+    + n.bodyId + '</b> をJanelia自身の公開データベース<a href="https://neuprint.janelia.org/?dataset=male-cns%3Av1.0&qt=findneurons" '
+    + 'target="_blank" rel="noopener">neuPrint</a>でご自身でも検索してみてください。';
 
   const tcode = n.typeCode, tfam = familyOf(n.ax);
   const trarity = NS.filter(m=>m.typeCode===tcode).length;
