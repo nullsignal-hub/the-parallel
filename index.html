@@ -388,7 +388,7 @@ footer strong{color:var(--dim); font-weight:400}
     <p>The same cell, rendered from the same real skeleton data, at 12″×12″,
     300dpi, printed on matte paper and shipped to you. Not a mockup — the exact
     bodyId above, drawn from the same public dataset the page just fetched.</p>
-    <p class="note" id="buyStatus">Ships in about a week. Fulfilled by hand, one
+    <p class="note" id="buyStatus">Ships in 2-3 weeks. Fulfilled by hand, one
     print at a time — this is a small independent project, not a warehouse.</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
     <div class="confirm-panel" id="confirmPanel">
@@ -397,15 +397,6 @@ footer strong{color:var(--dim); font-weight:400}
     </div>
   </div>
 
-  <!-- AdSense placeholder — inert until a real client id exists.
-       To activate: (1) add the loader script to <head>:
-       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
-       (2) uncomment the <ins> block below and fill in data-ad-client / data-ad-slot,
-       (3) add (adsbygoogle = window.adsbygoogle || []).push({}); once per slot. -->
-  <!--
-  <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-    data-ad-slot="XXXXXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins>
-  -->
 </div></section>
 
 <footer><div class="wrap">
@@ -421,6 +412,7 @@ footer strong{color:var(--dim); font-weight:400}
   <p><strong>Independent project.</strong> Not affiliated with, endorsed by, or reviewed by
   HHMI, Janelia, the University of Cambridge, MRC LMB or Google. Cell identities and
   descriptions here are illustrative and must not be used as a scientific reference.</p>
+  <p><a href="legal.html">Seller information &amp; policies</a></p>
 </div></footer>
 
 <script src="neurons.js"></script>
@@ -947,7 +939,7 @@ async function renderBuyButton(n){
   const panel = document.getElementById("confirmPanel");
   const panelHead = document.getElementById("confirmHead");
   const panelBody = document.getElementById("confirmBody");
-  const defaultStatus = "Ships in about a week. Fulfilled by hand, one print at a time — this is a small independent project, not a warehouse.";
+  const defaultStatus = "Ships in 2-3 weeks. Fulfilled by hand, one print at a time — this is a small independent project, not a warehouse.";
   status.textContent = defaultStatus;
   panel.className = "confirm-panel";
   el.innerHTML = "";
@@ -973,13 +965,16 @@ async function renderBuyButton(n){
       if(res.ok && result.status === "COMPLETED"){
         status.textContent = "";
         panelHead.textContent = "Payment received";
+        const addr = result.shipping && result.shipping.address;
+        const addrLine = addr ? [addr.address_line_1, addr.address_line_2, addr.admin_area_2, addr.admin_area_1, addr.postal_code].filter(Boolean).join(", ") : null;
+        const orderLine = "Order reference: " + data.orderID + (addrLine ? (" · Shipping to: " + addrLine) : "") + ". If this address is wrong, email us with this reference before it ships.";
         if(result.fulfillment && result.fulfillment.draftOrderId){
-          panelBody.textContent = "Your print (bodyId " + n.bodyId + ") is already queued for printing and "
-            + "ships within about a week. PayPal will send you a payment receipt by email now — no further action needed.";
+          panelBody.textContent = "Your print (bodyId " + n.bodyId + ") has been sent to production and "
+            + "ships in 2-3 weeks. " + orderLine + " PayPal will send you a payment receipt by email now.";
           panel.className = "confirm-panel show";
         } else {
           panelBody.textContent = "Payment confirmed (bodyId " + n.bodyId + "), but we couldn't automatically queue "
-            + "production. We'll take care of it manually — no action needed from you.";
+            + "production. We'll take care of it manually — no action needed from you. " + orderLine;
           panel.className = "confirm-panel show error";
         }
       } else {

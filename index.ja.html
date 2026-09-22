@@ -381,7 +381,7 @@ footer strong{color:var(--dim); font-weight:400}
     <p>同じ細胞を、同じ実測データから、12インチ×12インチ・300dpiでレンダリングし、
     マット紙に印刷してお届けします。模型ではありません——上に表示されているbodyIdそのものを、
     このページが今取得したのと同じ公開データセットから描いたものです。</p>
-    <p class="note" id="buyStatus">発送まで1週間ほど。1枚ずつ手作業で対応しています——
+    <p class="note" id="buyStatus">発送まで2〜3週間ほど。1枚ずつ手作業で対応しています——
     倉庫のある会社ではなく、小さな個人プロジェクトです。</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
     <div class="confirm-panel" id="confirmPanel">
@@ -390,15 +390,6 @@ footer strong{color:var(--dim); font-weight:400}
     </div>
   </div>
 
-  <!-- AdSense枠(未使用) — 実クライアントIDが無い間は不活性。
-       有効化する場合: (1) <head>にローダースクリプトを追加:
-       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
-       (2) 下記の<ins>をアンコメントしdata-ad-client/data-ad-slotを実値に置換、
-       (3) 枠ごとに (adsbygoogle = window.adsbygoogle || []).push({}); を1回実行。 -->
-  <!--
-  <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-    data-ad-slot="XXXXXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins>
-  -->
 </div></section>
 
 <footer><div class="wrap">
@@ -414,6 +405,7 @@ footer strong{color:var(--dim); font-weight:400}
   <p><strong>独立プロジェクト。</strong> HHMI、Janelia、ケンブリッジ大学、MRC LMB、Googleのいずれとも
   提携・承認・査読関係にありません。ここでの細胞の同定や説明は例示であり、
   科学的参照として使用しないでください。</p>
+  <p><a href="legal.ja.html">特定商取引法に基づく表記</a></p>
 </div></footer>
 
 <script src="neurons.ja.js"></script>
@@ -941,7 +933,7 @@ async function renderBuyButton(n){
   const panel = document.getElementById("confirmPanel");
   const panelHead = document.getElementById("confirmHead");
   const panelBody = document.getElementById("confirmBody");
-  const defaultStatus = "発送まで1週間ほど。1枚ずつ手作業で対応しています——倉庫のある会社ではなく、小さな個人プロジェクトです。";
+  const defaultStatus = "発送まで2〜3週間ほど。1枚ずつ手作業で対応しています——倉庫のある会社ではなく、小さな個人プロジェクトです。";
   status.textContent = defaultStatus;
   panel.className = "confirm-panel";
   el.innerHTML = "";
@@ -967,13 +959,16 @@ async function renderBuyButton(n){
       if(res.ok && result.status === "COMPLETED"){
         status.textContent = "";
         panelHead.textContent = "お支払い完了";
+        const addr = result.shipping && result.shipping.address;
+        const addrLine = addr ? [addr.postal_code, addr.admin_area_1, addr.admin_area_2, addr.address_line_1, addr.address_line_2].filter(Boolean).join(" ") : null;
+        const orderLine = "注文番号: " + data.orderID + (addrLine ? ("・お届け先: " + addrLine) : "") + "。住所に誤りがあれば、発送前にこの番号を添えてご連絡ください。";
         if(result.fulfillment && result.fulfillment.draftOrderId){
-          panelBody.textContent = "お使いのプリント(bodyId " + n.bodyId + ")はすでに印刷キューに入っており、"
-            + "1週間ほどで発送されます。PayPalからお支払いの領収書メールがすぐに届きます——追加の操作は不要です。";
+          panelBody.textContent = "お使いのプリント(bodyId " + n.bodyId + ")は製造キューに入りました。"
+            + "発送まで2〜3週間ほどです。" + orderLine + " PayPalからお支払いの領収書メールがすぐに届きます。";
           panel.className = "confirm-panel show";
         } else {
           panelBody.textContent = "お支払いは完了しました(bodyId " + n.bodyId + ")が、印刷キューへの自動登録に"
-            + "失敗しました。こちらで手動対応します——追加の操作は不要です。";
+            + "失敗しました。こちらで手動対応します——追加の操作は不要です。" + orderLine;
           panel.className = "confirm-panel show error";
         }
       } else {
