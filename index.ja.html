@@ -913,10 +913,9 @@ NS.forEach(n=>{ n.typeCode = typeCode(n.ax); });
 /* ------------------------------------------------------------------ show */
 /* --------------------------------------------------------- share image */
 /* ------------------------------------------------------------ checkout */
-// テスト中はsandbox認証情報。実際に課金する前に必ずPAYPAL_ENV="live"・
-// 本番のclient id・実際にデプロイしたworkerのURLに置き換えること。
-const PAYPAL_ENV = "sandbox";
-const PAYPAL_CLIENT_ID = "BAAMSIZFyAbzapk2m96WpQGjiEPMesOWnI3yjtlm5hi_oKwCWOZfB_VFFu2kT6v85ibv4pkmUWyLMtKSOM";
+// 2026-09-23よりLive。ここからは実際の課金が発生する。
+const PAYPAL_ENV = "live";
+const PAYPAL_CLIENT_ID = "BAAtXZPovqFXQFQxDuB4jJt_XsKhJ-J2D-p6Gf0FCtQ1efvziD1orz3wYlQ-u0SzzbcbkrFAH2Pf_utcME";
 const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
 
 let paypalSdkLoading = null;

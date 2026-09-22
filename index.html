@@ -919,11 +919,9 @@ function familyOf(ax){ const k=dominantAxis(ax); return FAMILIES[k+(ax[k]>=0?"+"
 NS.forEach(n=>{ n.typeCode = typeCode(n.ax); });
 
 /* ------------------------------------------------------------ checkout */
-// Sandbox credentials during testing. Swap both for the live values before
-// this ever takes a real payment: PAYPAL_ENV="live", the live client id, and
-// the deployed worker's real URL.
-const PAYPAL_ENV = "sandbox";
-const PAYPAL_CLIENT_ID = "BAAMSIZFyAbzapk2m96WpQGjiEPMesOWnI3yjtlm5hi_oKwCWOZfB_VFFu2kT6v85ibv4pkmUWyLMtKSOM";
+// Live as of 2026-09-23. Real payments happen from here on.
+const PAYPAL_ENV = "live";
+const PAYPAL_CLIENT_ID = "BAAtXZPovqFXQFQxDuB4jJt_XsKhJ-J2D-p6Gf0FCtQ1efvziD1orz3wYlQ-u0SzzbcbkrFAH2Pf_utcME";
 const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
 
 let paypalSdkLoading = null;
