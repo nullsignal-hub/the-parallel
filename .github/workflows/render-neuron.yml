@@ -1,0 +1,156 @@
+name: render-neuron
+
+# Triggered by the checkout Worker right after a THE PARALLEL purchase of the
+# visitor's own neuron in one of the five styles (product "neuron" + style).
+# Renders that one neuron as a 12x12" / 300 dpi sheet (portrait-render/
+# neuron_sheet.py), publishes it under a random name, and places a DRAFT
+# Printful order -- the seller still clicks "Confirm" in the Printful
+# dashboard (same safety policy as the rest of the checkout).
+#
+# Printful external_id is "neuron-<order_id>": Printful caps external_id at
+# 32 characters (digits, letters, dashes, underscores), so the longer
+# reference "neuron-<bodyId>-<style>-<order_id>" cannot be used there; it is
+# carried in the item name and the Discord alert instead. The Worker keys its
+# KV order record by the same "neuron-<order_id>" so the package_shipped
+# webhook finds it.
+on:
+  workflow_dispatch:
+    inputs:
+      body_id:
+        description: "bodyId from the 153-neuron roster (digits)"
+        required: true
+      style:
+        description: "ink | spectral | blueprint | duotone | constellation"
+        required: true
+      order_id:
+        description: "PayPal order id (uniqueness key for the Printful order)"
+        required: true
+      recipient_b64:
+        description: "base64 JSON: {name,address1,address2,city,state_code,country_code,zip,email}"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  render-and-order:
+    runs-on: ubuntu-latest
+    env:
+      # Inputs go through env, never straight into shell text.
+      BODY_ID: ${{ github.event.inputs.body_id }}
+      STYLE: ${{ github.event.inputs.style }}
+      ORDER_ID: ${{ github.event.inputs.order_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        id: validate
+        run: |
+          set -eu
+          echo "$BODY_ID" | grep -Eq '^[0-9]{1,12}$' || { echo "bad body_id" >&2; exit 1; }
+          case "$STYLE" in ink|spectral|blueprint|duotone|constellation) ;; *) echo "bad style" >&2; exit 1;; esac
+          # 25 max so that "neuron-" + order_id stays within Printful's 32.
+          echo "$ORDER_ID" | grep -Eq '^[A-Za-z0-9-]{1,25}$' || { echo "bad order_id" >&2; exit 1; }
+          grep -Eq "\"bodyId\":$BODY_ID," neurons.js || { echo "body_id not in roster" >&2; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r portrait-render/requirements.txt
+
+      - name: Render neuron sheet
+        id: render
+        working-directory: portrait-render
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python neuron_sheet.py --body-id "$BODY_ID" --style "$STYLE" \
+            --size 12x12 --dpi 300 --out out/neuron.png | tee out/render.json
+          python - <<'PYEOF'
+          import json, os
+          from PIL import Image
+          r = json.load(open("out/render.json"))
+          assert Image.open("out/neuron.png").size == (3600, 3600), "not 3600x3600"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("type=%s\n" % r["type"].replace("\n", " "))
+          PYEOF
+
+      - name: Publish with a random (non-guessable) filename
+        id: publish
+        run: |
+          set -eu
+          TOKEN=$(python -c "import secrets; print(secrets.token_hex(12))")
+          DEST="connectome-art-prints/pn-$TOKEN.png"
+          mv portrait-render/out/neuron.png "$DEST"
+          echo "dest=$DEST" >> "$GITHUB_OUTPUT"
+          echo "url=https://raw.githubusercontent.com/${{ github.repository }}/main/$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        run: |
+          set -eu
+          git config user.name "neuron-render bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "${{ steps.publish.outputs.dest }}"
+          git commit -m "Render neuron $BODY_ID ($STYLE) for order $ORDER_ID"
+          # Two purchases close together both push to main: rebase and retry.
+          for i in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            sleep $((i * 3))
+            git pull --rebase
+          done
+          echo "push failed after retries" >&2
+          exit 1
+
+      - name: Wait for raw.githubusercontent.com to serve the file
+        run: |
+          URL="${{ steps.publish.outputs.url }}"
+          for i in $(seq 1 20); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$CODE" = "200" ]; then echo "ready after $i tries"; exit 0; fi
+            sleep 3
+          done
+          echo "file never became reachable at $URL" >&2
+          exit 1
+
+      - name: Create draft Printful order
+        id: printful
+        working-directory: portrait-render
+        env:
+          PRINTFUL_TOKEN: ${{ secrets.PRINTFUL_TOKEN }}
+          RECIPIENT_B64: ${{ github.event.inputs.recipient_b64 }}
+          FILE_URL: ${{ steps.publish.outputs.url }}
+          CELL_TYPE: ${{ steps.render.outputs.type }}
+        run: python printful_draft.py
+
+      - name: Notify Discord (success)
+        if: success()
+        working-directory: portrait-render
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          URGENT: "0"
+          TITLE: "New paid neuron order - draft ready to confirm: bodyId ${{ github.event.inputs.body_id }} (${{ github.event.inputs.style }})"
+          DRAFT_ID: ${{ steps.printful.outputs.draft_id }}
+          CELL_TYPE: ${{ steps.render.outputs.type }}
+          FILE_URL: ${{ steps.publish.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NEXT: "Printful画面で下書きを確認して Confirm を押してください"
+        run: python notify_discord.py
+
+      # Runs if ANY earlier step failed (including validation), so a paid
+      # order never silently falls through. Uses only the stdlib, so it works
+      # even when setup-python / pip failed.
+      - name: Notify Discord (FAILED, @everyone)
+        if: failure()
+        working-directory: portrait-render
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          URGENT: "1"
+          TITLE: "PAID NEURON ORDER NOT AUTO-FULFILLED: bodyId ${{ github.event.inputs.body_id }} (${{ github.event.inputs.style }})"
+          DRAFT_ID: ${{ steps.printful.outputs.draft_id }}
+          CELL_TYPE: ${{ steps.render.outputs.type }}
+          FILE_URL: ${{ steps.publish.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NEXT: "validate=${{ steps.validate.outcome }} render=${{ steps.render.outcome }} publish=${{ steps.publish.outcome }} printful=${{ steps.printful.outcome }} / Runのログを確認し、手動で描画とPrintful発注をしてください"
+        run: python3 notify_discord.py
