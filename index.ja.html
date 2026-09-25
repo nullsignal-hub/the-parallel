@@ -141,6 +141,32 @@ table.facts td:last-child{text-align:right; color:var(--ink); font-variant-numer
 .confirm-panel.error{border-color:var(--hot); background:rgba(217,96,58,.08)}
 .confirm-panel.error .head{color:var(--hot)}
 
+/* ---- print style picker ---- */
+.stylepick{margin:22px 0 8px}
+.sp-head{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--gold);
+  margin-bottom:10px}
+.sp-thumbs{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:16px}
+.sp-thumb{appearance:none; -webkit-appearance:none; background:transparent; min-width:0;
+  border:1px solid var(--line); border-radius:3px; padding:3px; cursor:pointer;
+  display:flex; flex-direction:column; gap:5px; color:var(--dim);
+  font-family:var(--mono); font-size:10px; letter-spacing:.02em; transition:.14s}
+.sp-thumb canvas{display:block; width:100%; height:auto; aspect-ratio:1/1; border-radius:2px;
+  background:#05060a}
+.sp-thumb span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  text-align:center; padding:0 2px 2px}
+.sp-thumb:hover{border-color:#39404d; color:var(--ink)}
+.sp-thumb[aria-checked="true"]{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);
+  color:var(--ink)}
+.sp-thumb:focus-visible{outline:1px solid var(--ink); outline-offset:2px}
+.sp-sheet{max-width:520px; border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  background:#05060a}
+.sp-sheet canvas{display:block; width:100%; height:auto; aspect-ratio:1/1}
+.sp-name{font-family:var(--mono); font-size:12px; letter-spacing:.04em; color:var(--ink);
+  margin:12px 0 4px}
+.sp-name small{color:var(--faint); font-size:10.5px; letter-spacing:.04em; margin-left:6px}
+.cta .sp-desc{font-family:var(--sans); font-size:13px; color:var(--dim); margin:0 0 4px}
+@media(max-width:520px){ .sp-thumb span{display:none} .sp-thumbs{gap:6px} }
+
 /* ---- footer ---- */
 footer{border-top:1px solid var(--line); padding:44px 0 90px; font-family:var(--sans);
   font-size:12.5px; line-height:2; color:var(--faint)}
@@ -380,9 +406,18 @@ footer strong{color:var(--dim); font-weight:400}
 
   <div class="cta">
     <div class="tag">持ち帰る — ¥7,200</div>
-    <p>同じ細胞を、同じ実測データから、12インチ×12インチ・300dpiでレンダリングし、
-    マット紙に印刷してお届けします。模型ではありません——上に表示されているbodyIdそのものを、
+    <p>同じ細胞を、同じ実測データから、下で選んだスタイルで12インチ×12インチ・300dpiに
+    レンダリングし、マット紙に印刷してお届けします。模型ではありません——上に表示されているbodyIdそのものを、
     このページが今取得したのと同じ公開データセットから描いたものです。</p>
+    <div class="stylepick" id="stylePick">
+      <div class="sp-head">スタイルを選ぶ</div>
+      <div class="sp-thumbs" id="spThumbs" role="radiogroup" aria-label="印刷スタイル"></div>
+      <div class="sp-sheet"><canvas id="spSheet" width="900" height="900"></canvas></div>
+      <div class="sp-name" id="spName"></div>
+      <p class="sp-desc" id="spDesc"></p>
+      <p class="note" id="spNote">プレビューは、印刷用画像と同じ描き方でこのページ上に描いた紙面(12インチ角)の縮小表示です。
+      書体などの細部はわずかに異なります。</p>
+    </div>
     <p class="note" id="buyStatus">発送まで2〜3週間ほど。1枚ずつ手作業で対応しています——
     倉庫のある会社ではなく、小さな個人プロジェクトです。</p>
     <div id="paypal-button-container" style="max-width:320px;margin-top:18px"></div>
@@ -413,6 +448,7 @@ footer strong{color:var(--dim); font-weight:400}
 </div></footer>
 
 <script src="neurons.ja.js"></script>
+<script src="parallel-styles.js"></script>
 <script>
 /* ------------------------------------------------------------------ data */
 const R = window.ROSTER, NS = R.neurons;
@@ -428,19 +464,21 @@ async function swc(id){
   cache.set(id,p); return p;
 }
 function parse(text){
-  const xs=[],ys=[],zs=[],pa=[],idx=new Map();
+  // ids/rs (node id, radius) are kept for parallel-styles.js, which redraws
+  // the skeleton exactly the way the print renderer (render.py) does
+  const ids=[],xs=[],ys=[],zs=[],rs=[],pa=[],idx=new Map();
   for(const ln of text.split("\n")){
     if(!ln || ln[0]==="#") continue;
     const f=ln.trim().split(/\s+/); if(f.length<7) continue;
     idx.set(+f[0], xs.length);
-    xs.push(+f[2]); ys.push(+f[3]); zs.push(+f[4]); pa.push(+f[6]);
+    ids.push(+f[0]); xs.push(+f[2]); ys.push(+f[3]); zs.push(+f[4]); rs.push(+f[5]); pa.push(+f[6]);
   }
   const seg=[];
   for(let i=0;i<xs.length;i++){
     const p=pa[i]; if(p<0||!idx.has(p)) continue;
     const j=idx.get(p); seg.push([xs[i],ys[i],zs[i],xs[j],ys[j],zs[j]]);
   }
-  return {xs,ys,zs,seg};
+  return {ids,xs,ys,zs,rs,pa,seg};
 }
 
 /* ------------------------------------------------------- canvas renderer */
@@ -918,6 +956,99 @@ const PAYPAL_ENV = "live";
 const PAYPAL_CLIENT_ID = "BAAtXZPovqFXQFQxDuB4jJt_XsKhJ-J2D-p6Gf0FCtQ1efvziD1orz3wYlQ-u0SzzbcbkrFAH2Pf_utcME";
 const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
 
+/* ------------------------------------------------------- print style pick */
+// The style chosen here is what create-order sends, and the server renders
+// the print with the same five render.py styles that parallel-styles.js ports.
+const STYLE_INFO = {
+  ink:           {name:"インク(解剖図)", short:"インク",
+    desc:"紙色の地に、黒一色の線だけで描く学術図版。太い枝ほど線が太くなる。色は使わない。"},
+  spectral:      {name:"スペクトラル(発光)", short:"スペクトラル",
+    desc:"黒に近い地に、青く発光する線。手前にある枝ほど明るく、奥の枝は暗く沈む。"},
+  blueprint:     {name:"ブループリント(製図)", short:"ブループリント",
+    desc:"濃紺の地にシアン1色の細線。方眼と座標の目盛りが付いた設計図のような描き方。"},
+  duotone:       {name:"デュオトーン(2色刷り)", short:"デュオトーン",
+    desc:"朱と藍の2色のインクを、わずかに版ズレさせて重ねたリソグラフ風の平刷り。"},
+  constellation: {name:"コンステレーション(星座)", short:"コンステレーション",
+    desc:"黒地に金。枝を捨て、最も太い点から最も遠い到達点へ線を引いた抽象図。"}
+};
+const PS = window.ParallelStyles || null;
+const STYLE_KEYS = ["ink","spectral","blueprint","duotone","constellation"];
+let selectedStyle = "ink", styleSk = null, styleN = null, styleToken = 0;
+const spThumbCanvas = {};
+(function buildStylePicker(){
+  const box = document.getElementById("spThumbs");
+  if(!PS){ document.getElementById("stylePick").style.display = "none"; return; }
+  for(const k of STYLE_KEYS){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "sp-thumb"; b.setAttribute("role","radio");
+    b.setAttribute("aria-checked", k===selectedStyle ? "true" : "false");
+    b.setAttribute("aria-label", STYLE_INFO[k].name); b.title = STYLE_INFO[k].name;
+    b.dataset.style = k;
+    const cv = document.createElement("canvas"); cv.width = 240; cv.height = 240;
+    const sp = document.createElement("span"); sp.textContent = STYLE_INFO[k].short;
+    b.appendChild(cv); b.appendChild(sp); box.appendChild(b);
+    spThumbCanvas[k] = cv;
+    b.onclick = () => selectStyle(k);
+  }
+  updateStyleText();
+})();
+function updateStyleText(){
+  const s = STYLE_INFO[selectedStyle];
+  document.getElementById("spName").innerHTML = "";
+  document.getElementById("spName").append(s.name);
+  const sm = document.createElement("small"); sm.textContent = "12×12インチ紙面";
+  document.getElementById("spName").appendChild(sm);
+  document.getElementById("spDesc").textContent = s.desc;
+}
+function blankCanvas(cv, style){
+  const c = cv.getContext("2d"); c.fillStyle = PS ? PS.BG[style] : "#05060a";
+  c.fillRect(0,0,cv.width,cv.height);
+}
+function drawStylePreview(){
+  const cv = document.getElementById("spSheet");
+  if(!PS) return;
+  if(!styleSk){ blankCanvas(cv, selectedStyle); return; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const css = cv.clientWidth || 450;
+  const px = Math.max(300, Math.min(1800, Math.round(css*dpr/2)*2));
+  if(cv.width !== px){ cv.width = px; cv.height = px; }
+  PS.drawSheet(cv, styleSk, selectedStyle, {label:{type:styleN.type, bodyId:styleN.bodyId,
+    subtitle:PS.subtitleFor(styleN)}});
+  cv.setAttribute("aria-label", styleN.type+" bodyId "+styleN.bodyId+" — "+STYLE_INFO[selectedStyle].name+"のプレビュー");
+}
+function selectStyle(k){
+  if(STYLE_KEYS.indexOf(k) < 0) return;
+  selectedStyle = k;
+  document.querySelectorAll("#spThumbs .sp-thumb").forEach(b =>
+    b.setAttribute("aria-checked", b.dataset.style===k ? "true" : "false"));
+  updateStyleText();
+  drawStylePreview();
+}
+async function renderStylePicker(n){
+  if(!PS) return;
+  const my = ++styleToken;
+  styleSk = null; styleN = n;
+  for(const k of STYLE_KEYS) blankCanvas(spThumbCanvas[k], k);
+  drawStylePreview();
+  let sk;
+  try{ sk = await swc(n.bodyId); }catch(e){
+    if(my===styleToken) document.getElementById("spDesc").textContent =
+      "骨格データに到達できず、プレビューを描けませんでした("+e.message+")。スタイルの選択と注文はそのまま可能です。";
+    return;
+  }
+  if(my !== styleToken) return;              // a newer neuron is being shown
+  styleSk = sk;
+  updateStyleText();
+  drawStylePreview();
+  for(const k of STYLE_KEYS){                 // one thumbnail per frame, keeps the page responsive
+    await new Promise(r => setTimeout(r, 0));
+    if(my !== styleToken) return;
+    PS.drawSheet(spThumbCanvas[k], sk, k, {});
+  }
+}
+let spResizeT = null;
+addEventListener("resize", () => { clearTimeout(spResizeT); spResizeT = setTimeout(drawStylePreview, 250); });
+
 let paypalSdkLoading = null;
 function loadPaypalSdk(){
   if(window.paypal) return Promise.resolve();
@@ -930,6 +1061,7 @@ function loadPaypalSdk(){
   });
   return paypalSdkLoading;
 }
+let orderedStyle = "ink";
 async function renderBuyButton(n){
   const el = document.getElementById("paypal-button-container");
   const status = document.getElementById("buyStatus");
@@ -944,9 +1076,12 @@ async function renderBuyButton(n){
   window.paypal.Buttons({
     style: { layout: "horizontal", color: "black", label: "pay", height: 40 },
     createOrder: async () => {
+      // read the picker at click time: the buyer may change style after the button rendered
+      orderedStyle = STYLE_KEYS.indexOf(selectedStyle) >= 0 ? selectedStyle : "ink";
       const res = await fetch(WORKER_URL + "/create-order", {
         method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ bodyId: n.bodyId, type: n.type, lang: "ja" })
+        body: JSON.stringify({ product: "neuron", bodyId: String(n.bodyId), type: n.type,
+          style: orderedStyle, lang: "ja" })
       });
       const data = await res.json();
       if(!res.ok || !data.id) throw new Error("order create failed");
@@ -965,7 +1100,13 @@ async function renderBuyButton(n){
         const addr = result.shipping && result.shipping.address;
         const addrLine = addr ? [addr.postal_code, addr.admin_area_1, addr.admin_area_2, addr.address_line_1, addr.address_line_2].filter(Boolean).join(" ") : null;
         const orderLine = "注文番号: " + data.orderID + (addrLine ? ("・お届け先: " + addrLine) : "") + "。住所に誤りがあれば、発送前にこの番号を添えてご連絡ください。";
-        if(result.fulfillment && result.fulfillment.draftOrderId){
+        const styleName = STYLE_INFO[orderedStyle] ? STYLE_INFO[orderedStyle].name : orderedStyle;
+        if(result.fulfillment && result.fulfillment.queued){
+          panelBody.textContent = "あなたのニューロン(bodyId " + n.bodyId + "・スタイル " + styleName
+            + ")の印刷用画像を生成しています(1分ほど)。生成後、自動で製造キューに進みます。"
+            + "発送まで2〜3週間ほどです。" + orderLine + " PayPalからお支払いの領収書メールがすぐに届きます。";
+          panel.className = "confirm-panel show";
+        } else if(result.fulfillment && result.fulfillment.draftOrderId){
           panelBody.textContent = "お使いのプリント(bodyId " + n.bodyId + ")は製造キューに入りました。"
             + "発送まで2〜3週間ほどです。" + orderLine + " PayPalからお支払いの領収書メールがすぐに届きます。";
           panel.className = "confirm-panel show";
@@ -1186,6 +1327,7 @@ async function show(n){
     new URLSearchParams({url:permalink, title:"I am "+n.type+" — "+n.line}).toString();
   document.getElementById("linebtn").href = "https://social-plugins.line.me/lineit/share?" +
     new URLSearchParams({url:permalink, text:shareShort}).toString();
+  renderStylePicker(n);
   renderBuyButton(n);
 }
 
