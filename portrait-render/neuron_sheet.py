@@ -28,10 +28,13 @@ import time
 import argparse
 import urllib.request
 
+import colorsys
+
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 import render as R
 from render import load_swc, project, CREDIT, STYLES, parse_size
@@ -92,11 +95,73 @@ def subtitle_for(entry):
     return "  ·  ".join(p for p in parts if p)
 
 
+# --------------------------------------------------------------------------
+# Single-neuron versions of two styles.  render.py's spectral and
+# constellation were written for a whole cell TYPE (dozens of neurons); on one
+# neuron spectral sinks into the dark and constellation collapses to a few
+# rays.  These keep each style's ground, colours and spirit but are built for
+# one neuron.  render.py itself (type-level art, pair sheets) is untouched.
+# The browser preview (parallel-styles.js) mirrors these two functions.
+# --------------------------------------------------------------------------
+def _root_point(p, rad):
+    """Segment start of the thickest segment: the cell's root (soma side)."""
+    pts = p.reshape(-1, 2)
+    return pts[int(np.argmax(np.repeat(rad, 2)))]
+
+
+def _degree_keys(p):
+    """Unique endpoints (rounded to 0.01) and how many segments meet there."""
+    pts = np.round(p.reshape(-1, 2), 2)
+    return np.unique(pts, axis=0, return_counts=True)
+
+
+def style_spectral_single(ax, neurons, view):
+    """Dark ground; hue runs from cool at the root to warm at the far tips,
+    every line at full brightness, over a soft glow."""
+    ax.set_facecolor("#07080d")
+    for segs, rad in neurons:
+        p, _ = project(segs, view)
+        root = _root_point(p, rad)
+        dist = np.linalg.norm(p.mean(axis=1) - root, axis=1)
+        t = R._norm(dist)
+        cols = np.array([colorsys.hsv_to_rgb(0.60 - 0.55 * tt, 0.70, 1.0) for tt in t])
+        lw = R._lw(0.2 + 1.1 * R._norm(rad))
+        ax.add_collection(LineCollection(p, colors=np.c_[cols, np.full(len(t), 0.12)],
+                                         linewidths=lw * 3.2, capstyle="round"))
+        ax.add_collection(LineCollection(p, colors=np.c_[cols, np.full(len(t), 0.92)],
+                                         linewidths=lw, capstyle="round"))
+    return "#07080d", "#c9d4e8"
+
+
+def style_constellation_single(ax, neurons, view):
+    """Gold on black star field: every skeleton point a star sized by its
+    thickness, the branch tips brighter, the root a white star."""
+    ax.set_facecolor("#0b0b0c")
+    for segs, rad in neurons:
+        p, _ = project(segs, view)
+        pts = p.reshape(-1, 2)
+        s = (0.5 + 5.5 * R._norm(np.repeat(rad, 2))) * R.SCALE ** 2
+        ax.scatter(pts[:, 0], pts[:, 1], s=s, c="#f3d79a", alpha=0.55, linewidths=0)
+        keys, cnt = _degree_keys(p)
+        tips = keys[cnt == 1]
+        ax.scatter(tips[:, 0], tips[:, 1], s=6 * R.SCALE ** 2, c="#ffe9b0",
+                   alpha=0.95, linewidths=0, zorder=4)
+        root = _root_point(p, rad)
+        ax.scatter([root[0]], [root[1]], s=30 * R.SCALE ** 2, c="#ffffff",
+                   alpha=1, linewidths=0, zorder=6)
+    return "#0b0b0c", "#d9a441"
+
+
+SHEET_STYLES = dict(STYLES)
+SHEET_STYLES["spectral"] = style_spectral_single
+SHEET_STYLES["constellation"] = style_constellation_single
+
+
 def render_sheet(body_id, style, size=(12.0, 12.0), dpi=300, outfile=None,
                  cell_type=None, subtitle=None, view="frontal",
                  swc_dir=DEFAULT_SWC_DIR):
-    if style not in STYLES:
-        raise SystemExit("unknown style %r (one of %s)" % (style, ", ".join(STYLES)))
+    if style not in SHEET_STYLES:
+        raise SystemExit("unknown style %r (one of %s)" % (style, ", ".join(SHEET_STYLES)))
     neuron = load_swc(fetch(body_id, swc_dir))
     if not len(neuron[0]):
         raise SystemExit("empty skeleton for bodyId %d" % body_id)
@@ -105,7 +170,7 @@ def render_sheet(body_id, style, size=(12.0, 12.0), dpi=300, outfile=None,
     try:
         fig = plt.figure(figsize=size, dpi=dpi)
         ax = fig.add_axes(RECT)
-        bg, fg = STYLES[style](ax, [neuron], view)
+        bg, fg = SHEET_STYLES[style](ax, [neuron], view)
         fig.patch.set_facecolor(bg)
         ax.set_aspect("equal")
 
