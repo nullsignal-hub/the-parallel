@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Parallel · Lab posters</title>
+<meta name="description" content="A poster of the cell type you study: every reconstructed neuron of that type in the MaleCNS v1.0 connectome, overlaid and drawn from the published skeletons.">
+<meta property="og:title" content="The Parallel · Lab posters">
+<meta property="og:description" content="Every reconstructed neuron of your cell type, drawn from the MaleCNS v1.0 connectome.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nullsignal-hub.github.io/the-parallel/labs/">
+<style>
+:root{
+  --bg:#07080b; --bg2:#0c0e13; --ink:#e8e6e1; --dim:#8d8f96; --faint:#4a4d55;
+  --line:#1c1f27; --hot:#d9603a; --cool:#5fa8d3; --gold:#c9a227;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg); color:var(--ink); font-family:var(--serif);
+  font-size:18px; line-height:1.72; -webkit-font-smoothing:antialiased; overflow-x:hidden}
+.wrap{max-width:720px; margin:0 auto; padding:0 16px}
+h1,h2,h3{font-weight:400; line-height:1.15; letter-spacing:-.01em; margin:0}
+p{margin:0 0 1.15em}
+.kicker{font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--dim); margin:0 0 18px}
+.lead{font-size:21px; color:#d6d4ce}
+.dim{color:var(--dim)}
+a{color:var(--ink)}
+.langlink{position:fixed; top:16px; right:16px; z-index:5; font-family:var(--mono);
+  font-size:11px; letter-spacing:.08em; color:var(--dim); text-decoration:none;
+  border:1px solid var(--line); border-radius:3px; padding:6px 10px; background:rgba(7,8,11,.8)}
+.langlink:hover{color:var(--ink); border-color:#39404d}
+
+#top{padding:88px 0 40px}
+#top h1{font-size:clamp(30px,7vw,48px); margin:0 0 18px}
+.facts{list-style:none; padding:0; margin:28px 0 0; border-top:1px solid var(--line);
+  font-family:var(--sans); font-size:15px; color:var(--dim)}
+.facts li{padding:11px 0; border-bottom:1px solid var(--line); display:flex; gap:14px}
+.facts li b{font-family:var(--mono); font-weight:400; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink); flex:0 0 96px; padding-top:3px}
+.facts li span{min-width:0}
+.deadline{margin:26px 0 0; padding:14px 16px; border:1px solid var(--line); border-left:2px solid var(--cool);
+  border-radius:3px; background:var(--bg2); font-family:var(--sans); font-size:14.5px; color:var(--dim)}
+.deadline strong{color:var(--ink); font-weight:500}
+
+section.step{padding:34px 0; border-top:1px solid var(--line)}
+.sn{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--gold); margin:0 0 12px}
+.hint{font-family:var(--sans); font-size:13.5px; color:var(--dim); margin:8px 0 0}
+
+/* ---- search ---- */
+.combo{position:relative}
+#q{width:100%; font-family:var(--mono); font-size:16px; letter-spacing:.02em; color:var(--ink);
+  background:var(--bg2); border:1px solid #39404d; border-radius:3px; padding:13px 14px; outline:none}
+#q:focus{border-color:var(--ink)}
+#q::placeholder{color:#6b6e76}
+#typeList{list-style:none; margin:4px 0 0; padding:0; position:absolute; left:0; right:0; z-index:4;
+  max-height:340px; overflow-y:auto; background:#0e1016; border:1px solid #39404d; border-radius:3px;
+  display:none}
+#typeList.open{display:block}
+#typeList li{display:flex; justify-content:space-between; gap:12px; align-items:baseline;
+  padding:9px 14px; cursor:pointer; border-bottom:1px solid var(--line)}
+#typeList li:last-child{border-bottom:0}
+#typeList li .t{font-family:var(--mono); font-size:14px; color:var(--ink); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; min-width:0}
+#typeList li .t mark{background:none; color:var(--gold)}
+#typeList li .c{font-family:var(--mono); font-size:11.5px; color:var(--dim); white-space:nowrap; flex:0 0 auto}
+#typeList li[aria-selected="true"], #typeList li:hover{background:#1a1d25}
+#typeList li.none{cursor:default; color:var(--dim); font-family:var(--sans); font-size:14px}
+.chosen{margin:16px 0 0; font-family:var(--sans); font-size:15px; color:var(--dim)}
+.chosen b{font-family:var(--mono); font-weight:400; font-size:20px; color:var(--ink); margin-right:10px}
+
+/* ---- preview ---- */
+.pv{border:1px solid var(--line); border-radius:3px; overflow:hidden; background:#05060a;
+  margin:0 auto; max-width:520px}
+.pv.land{max-width:100%}
+.pv canvas{display:block; width:100%; height:auto}
+.pvstat{font-family:var(--mono); font-size:11.5px; color:var(--dim); letter-spacing:.04em;
+  margin:10px 0 0; min-height:1.6em}
+.pvnote{font-family:var(--sans); font-size:13.5px; color:var(--dim); margin:6px 0 0}
+.empty{padding:60px 16px; text-align:center; font-family:var(--sans); font-size:14.5px; color:var(--dim)}
+
+/* ---- options ---- */
+.sp-thumbs{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px}
+.opt{appearance:none; -webkit-appearance:none; background:transparent; min-width:0;
+  border:1px solid var(--line); border-radius:3px; padding:3px; cursor:pointer; color:var(--dim);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.02em; transition:.14s}
+.opt:hover{border-color:#39404d; color:var(--ink)}
+.opt[aria-checked="true"]{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); color:var(--ink)}
+.opt:focus-visible{outline:1px solid var(--ink); outline-offset:2px}
+.sp-thumb{display:flex; flex-direction:column; gap:5px}
+.sp-thumb canvas{display:block; width:100%; height:auto; border-radius:2px; background:#05060a}
+.sp-thumb span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  text-align:center; padding:0 2px 2px}
+.sp-desc{font-family:var(--sans); font-size:14px; color:var(--dim); margin:12px 0 0}
+.sp-desc b{font-family:var(--mono); font-weight:400; font-size:12px; color:var(--ink); margin-right:8px}
+.sizes{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.size{padding:14px 12px; text-align:left; display:flex; flex-direction:column; gap:4px}
+.size .d{font-family:var(--mono); font-size:15px; color:var(--ink)}
+.size .p{font-family:var(--mono); font-size:13px; color:var(--gold)}
+.size .m{font-family:var(--sans); font-size:12.5px; color:var(--dim)}
+#cap{width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); background:var(--bg2);
+  border:1px solid #39404d; border-radius:3px; padding:12px 14px; outline:none}
+#cap:focus{border-color:var(--ink)}
+#cap::placeholder{color:#6b6e76}
+.caperr{font-family:var(--sans); font-size:13.5px; color:#f08a6c; margin:8px 0 0}
+.capmeta{display:flex; justify-content:space-between; gap:12px; font-family:var(--mono);
+  font-size:11px; color:var(--dim); margin-top:6px}
+#capCount{white-space:nowrap; flex:0 0 auto}
+
+/* ---- order ---- */
+.cta{border:1px dashed #3a4150; border-radius:3px; padding:22px; background:rgba(201,162,39,.03)}
+.summary{font-family:var(--mono); font-size:13px; color:var(--ink); margin:0 0 14px; word-break:break-word}
+.summary .price{color:var(--gold)}
+.notice{font-family:var(--sans); font-size:14px; color:var(--ink); border-left:2px solid var(--hot);
+  padding:4px 0 4px 12px; margin:0 0 16px}
+.notice p{margin:0 0 6px}
+.notice p:last-child{margin:0}
+.note{font-family:var(--sans); font-size:13px; color:var(--dim); margin:0 0 6px}
+#paypal-button-container{max-width:320px; margin-top:14px}
+.confirm-panel{display:none; margin-top:16px; padding:16px 18px; border:1px solid var(--gold);
+  border-radius:3px; background:rgba(201,162,39,.08)}
+.confirm-panel.show{display:block}
+.confirm-panel .head{font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--gold);
+  text-transform:uppercase; margin-bottom:8px}
+.confirm-panel p{font-family:var(--sans); font-size:14px; color:var(--ink); margin:0 0 6px}
+.confirm-panel p:last-child{margin-bottom:0}
+.confirm-panel.error{border-color:var(--hot); background:rgba(217,96,58,.08)}
+.confirm-panel.error .head{color:var(--hot)}
+
+footer{border-top:1px solid var(--line); padding:44px 0 90px; font-family:var(--mono);
+  font-size:11.5px; line-height:1.85; color:var(--dim); margin-top:40px}
+footer a{color:var(--ink)}
+footer strong{color:var(--ink); font-weight:400}
+@media(max-width:520px){
+  .sp-thumb span{display:none} .sp-thumbs{gap:6px}
+  .facts li{flex-direction:column; gap:2px} .facts li b{flex:none}
+}
+</style>
+</head>
+<body>
+<a class="langlink" href="index.ja.html" lang="ja">日本語</a>
+
+<header id="top"><div class="wrap">
+  <div class="kicker">The Parallel · Lab posters</div>
+  <h1>The cell type you study, printed from the connectome</h1>
+  <p class="lead">Search for a cell type in the MaleCNS v1.0 connectome of the adult male
+  <i>Drosophila</i>. The poster overlays every reconstructed neuron of that type, drawn from the
+  published skeletons in one of five styles.</p>
+  <ul class="facts">
+    <li><b>What arrives</b><span>A poster, 18×24 in or 24×36 in, printed on matte paper and shipped to you.
+      Rendered at 300 dpi from the skeletons, frontal view.</span></li>
+    <li><b>On the sheet</b><span>The type name, the number of neurons drawn, an optional one-line caption
+      of yours, and the dataset credit (CC BY 4.0).</span></li>
+    <li><b>Data</b><span>MaleCNS v1.0 (FlyEM, HHMI-Janelia; Cambridge Connectomics Group; Google Research).
+      Cell types are the dataset's own annotations. Up to 250 neurons of the type are drawn.</span></li>
+  </ul>
+  <p class="deadline"><strong>Presenting at SfN 2026 (November 14–18)?</strong> Printing and shipping take
+  about 2–3 weeks, so orders placed by <strong>October 25</strong> are expected to arrive in time. This is an
+  estimate, not a guarantee.</p>
+</div></header>
+
+<main class="wrap">
+  <section class="step" aria-labelledby="s1">
+    <div class="sn" id="s1">1 · Find your cell type</div>
+    <div class="combo">
+      <input id="q" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+        aria-controls="typeList" aria-labelledby="s1" autocomplete="off" autocapitalize="off"
+        spellcheck="false" placeholder="e.g. EPG, LC12, DNp01, KCg-m" disabled>
+      <ul id="typeList" role="listbox" aria-label="Matching cell types"></ul>
+    </div>
+    <p class="hint" id="qhint">Loading the list of cell types…</p>
+    <p class="chosen" id="chosen" aria-live="polite" hidden></p>
+  </section>
+
+  <section class="step" aria-labelledby="s2">
+    <div class="sn" id="s2">2 · Preview</div>
+    <div class="pv" id="pv"><div class="empty" id="pvEmpty">Choose a cell type above to see a preview.</div>
+      <canvas id="pvCanvas" width="600" height="800" hidden></canvas></div>
+    <p class="pvstat" id="pvStat" aria-live="polite"></p>
+    <p class="pvnote" id="pvNote">The preview draws a sample of up to 30 neurons of the type in your browser,
+    from the same skeletons and in the same way the print file is rendered. The print includes up to 250.
+    Density and the spread of colours therefore differ somewhat, and small details such as the typeface differ slightly.</p>
+  </section>
+
+  <section class="step" aria-labelledby="s3">
+    <div class="sn" id="s3">3 · Style</div>
+    <div class="sp-thumbs" id="styles" role="radiogroup" aria-labelledby="s3"></div>
+    <p class="sp-desc" id="styleDesc"></p>
+  </section>
+
+  <section class="step" aria-labelledby="s4">
+    <div class="sn" id="s4">4 · Size</div>
+    <div class="sizes" id="sizes" role="radiogroup" aria-labelledby="s4"></div>
+    <p class="hint">The sheet is turned portrait or landscape to match the shape of the cell type. Shipping is included.</p>
+  </section>
+
+  <section class="step" aria-labelledby="s5">
+    <div class="sn" id="s5"><label for="cap">5 · Caption (optional)</label></div>
+    <input id="cap" type="text" maxlength="60" placeholder="Lab of X — EPG neurons" autocomplete="off"
+      aria-describedby="capHelp">
+    <div class="capmeta"><span id="capHelp">Printed above the neuron count at the foot of the sheet. Up to 60 characters:
+      Latin letters (accents are fine), digits, Greek and basic punctuation.</span>
+      <span id="capCount">0 / 60</span></div>
+    <p class="caperr" id="capErr" role="alert" hidden></p>
+  </section>
+
+  <section class="step" aria-labelledby="s6">
+    <div class="sn" id="s6">6 · Order</div>
+    <div class="cta">
+      <p class="summary" id="summary">Choose a cell type first.</p>
+      <div class="notice">
+        <p><strong>Made to order.</strong> Each poster is printed for your order alone, so it can't be
+        returned or refunded for a change of mind. Please check the cell type, style, size and caption above
+        before paying.</p>
+        <p>If it arrives damaged or misprinted, email us within 14 days of delivery with your order reference
+        and we'll remake and reship it at no cost.</p>
+      </div>
+      <p class="note" id="buyStatus">Ships in about 2–3 weeks. A small independent project, fulfilled one order at a time.</p>
+      <div id="paypal-button-container"></div>
+      <p class="note" id="payNote" style="margin-top:8px">No PayPal account needed — a debit/credit card option
+      normally appears in the box above too.</p>
+      <div class="confirm-panel" id="confirmPanel" role="status">
+        <div class="head" id="confirmHead">Order confirmed</div>
+        <p id="confirmBody"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <p><strong>Data.</strong> MaleCNS v1.0. Data acquired and analyzed by the FlyEM Project Team
+  at HHMI-Janelia, the Cambridge Connectomics Group, and Google Research.
+  Released under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+  <strong>Adapted:</strong> skeletons were smoothed, reprojected and rendered; cell types and neuron counts
+  are taken from the dataset's annotations.</p>
+  <p><strong>Paper.</strong> Berg, Beckett, Costa, Schlegel, Januszewski et al.,
+  “Sexual dimorphism in the complete <i>Drosophila</i> male central nervous system connectome.”
+  Cell (2026). Preprint doi:10.1101/2025.10.09.680999.</p>
+  <p><strong>Independent project.</strong> Not affiliated with, endorsed by, or reviewed by
+  HHMI, Janelia, the University of Cambridge, MRC LMB or Google. The posters are artworks adapted from
+  the dataset, not scientific figures, and must not be used as a scientific reference.</p>
+  <p><a href="../legal.html">Seller information &amp; policies</a> · <a href="../index.html">The Parallel</a></p>
+</div></footer>
+
+<script src="../parallel-styles.js"></script>
+<script src="lab-styles.js"></script>
+<script>
+"use strict";
+/* ------------------------------------------------------------ checkout */
+// Same live values as the main page (../index.html). Real payments happen from here.
+const PAYPAL_ENV = "live";
+const PAYPAL_CLIENT_ID = "BAAtXZPovqFXQFQxDuB4jJt_XsKhJ-J2D-p6Gf0FCtQ1efvziD1orz3wYlQ-u0SzzbcbkrFAH2Pf_utcME";
+const WORKER_URL = "https://the-parallel-checkout.suto648.workers.dev";
+const LANG = "en";
+// Display only. The Worker fixes the price it charges; if the two ever differ,
+// the Worker is right and this table must be updated to match it.
+const PRICES_JPY = {"18x24": 14800, "24x36": 22800};
+const SIZES = {"18x24": [18, 24], "24x36": [24, 36]};
+const CAPTION_MAX = 60;
+const PREVIEW_MAX = 30, PRINT_MAX = 250;
+
+const LS = window.LabStyles;
+const STYLE_KEYS = ["ink","spectral","blueprint","duotone","constellation"];
+const STYLE_INFO = {
+  ink:           {name:"Ink", desc:"A scientific plate: one dark ink on a paper ground. Thicker branches draw heavier. No colour."},
+  spectral:      {name:"Spectral", desc:"Near-black ground. Each neuron gets its own hue; branches nearer to you are brighter."},
+  blueprint:     {name:"Blueprint", desc:"A technical drawing: cyan hairlines on deep navy, over a measured grid with coordinate ticks."},
+  duotone:       {name:"Duotone", desc:"Risograph-like: two flat inks, vermilion and navy, printed slightly out of register."},
+  constellation: {name:"Constellation", desc:"Gold on black. Branches are dropped; each neuron is lines from its thickest point to its 24 farthest points."}
+};
+// Caption rules = portrait-render/lab_inputs.py normalise_caption (and the Worker):
+// NFC, spaces trimmed, <= 60 characters, only what the print typeface has glyphs for.
+const CAPTION_OK = /^[\x20-\x7e¡-¬®-ſͰ-ͳͶ-ͷͻ-ͽ΄-ΊΌΎ-ΡΣ-Ͽ–—‘’“”…′″]*$/;
+function normCaption(raw){
+  const s = String(raw || "").normalize("NFC").replace(/^ +| +$/g, "");
+  if([...s].length > CAPTION_MAX) return {s, err: "long"};
+  if(!CAPTION_OK.test(s)) return {s, err: "chars"};
+  return {s, err: null};
+}
+
+const T = {
+  loading: "Loading the list of cell types…",
+  loaded: n => n.toLocaleString("en-US") + " cell types. Type any part of a name; matches from the start of a name come first.",
+  loadFail: "The list of cell types couldn't be loaded. Please reload the page.",
+  none: "No cell type matches that name.",
+  more: n => "+" + n.toLocaleString("en-US") + " more — keep typing to narrow it down",
+  count: r => r.n.toLocaleString("en-US") + (r.n === 1 ? " neuron" : " neurons"),
+  sides: r => { const s = ["L " + r.l, "R " + r.r]; if(r.m) s.push("M " + r.m); return s.join(" / "); },
+  chosen: r => r.n.toLocaleString("en-US") + (r.n === 1 ? " neuron" : " neurons") + " in MaleCNS v1.0 (" +
+    ["left " + r.l, "right " + r.r].concat(r.m ? ["midline " + r.m] : []).join(", ") + ")",
+  fetching: (d, n, f) => "Fetching skeletons " + d + " / " + n + (f ? " · " + f + " failed" : "") + "…",
+  drawn: (k, n, f, o) => "Preview: " + k + " of " + n.toLocaleString("en-US") + " neurons drawn" +
+    (f ? " · " + f + " skeleton" + (f > 1 ? "s" : "") + " couldn't be fetched and " + (f > 1 ? "were" : "was") + " skipped" : "") +
+    (o ? " · " + o + " outlier" + (o > 1 ? "s" : "") + " left out, as the print renderer does" : "") + ".",
+  capErr: {long: "The caption is longer than 60 characters.",
+    chars: "The caption can use Latin letters (with accents), digits, Greek letters and basic punctuation only — the print typeface has no other scripts."},
+  capBlock: "Fix the caption before ordering.",
+  printIncl: n => n <= PRINT_MAX ? "The print includes all " + n.toLocaleString("en-US") + "." :
+    "The print includes " + PRINT_MAX + " of the " + n.toLocaleString("en-US") + ".",
+  idsFail: "Couldn't load the preview sample for this type. You can still order; the print is rendered on our side.",
+  skFail: "The skeleton data couldn't be reached, so the preview can't be drawn. You can still order.",
+  aria: (t, st, sz) => "Preview of the " + t + " poster, " + st + " style, " + sz,
+  price: v => "¥" + v.toLocaleString("en-US"),
+  sizeLabel: k => k.replace("x", " × ") + " in",
+  sizeNote: {"18x24":"45.7 × 61 cm", "24x36":"61 × 91.4 cm"},
+  pickFirst: "Choose a cell type first.",
+  summary: (t, st, sz, pr, cap) => t + " · " + st + " · " + sz + " · " + pr + (cap ? " · caption “" + cap + "”" : " · no caption"),
+  payUnavailable: "(payment unavailable right now)",
+  defaultStatus: "Ships in about 2–3 weeks. A small independent project, fulfilled one order at a time.",
+  confirming: "Confirming…",
+  paid: "Payment received",
+  orderLine: (id, addr) => "Order reference: " + id + (addr ? " · Shipping to: " + addr : "") +
+    ". If this address is wrong, email us with this reference before it ships.",
+  queued: (o, ol) => "We're now rendering the print file for " + o.type + " (" + o.styleName + ", " + o.sizeLabel +
+    ") — with up to " + PRINT_MAX + " neurons this takes a few minutes. It then goes to the production queue " +
+    "automatically, and ships in about 2–3 weeks. " + ol + " PayPal will send you a payment receipt by email now.",
+  manual: (o, ol) => "Payment confirmed (" + o.type + ", " + o.styleName + ", " + o.sizeLabel + "), but we couldn't " +
+    "automatically queue production. We'll take care of it manually — no action needed from you. " + ol,
+  wrong: "Something went wrong",
+  failed: o => "We couldn't confirm the payment. If you were charged, please note the cell type (" + o.type +
+    ") and the approximate time, and reach out so we can sort it out.",
+  startFail: "Payment failed to start. Try again in a moment.",
+  addr: a => [a.address_line_1, a.address_line_2, a.admin_area_2, a.admin_area_1, a.postal_code].filter(Boolean).join(", ")
+};
+
+/* ------------------------------------------------------------ state */
+let TYPES = [], TYPES_LC = [];
+let sel = null;                 // selected types-index row
+let style = "ink", size = "18x24", caption = "";
+let neurons = [], sampleInfo = null, token = 0, previewSub = "";
+
+function previewFile(t){        // = labs/tools/build_preview_ids.py enc()
+  let s = "";
+  for(const ch of t){
+    if(/[A-Za-z0-9_-]/.test(ch)) s += ch;
+    else for(const b of new TextEncoder().encode(ch)) s += "~" + b.toString(16).toUpperCase().padStart(2, "0");
+  }
+  return "preview/" + s + ".json";
+}
+
+/* ------------------------------------------------------------ search */
+const q = document.getElementById("q"), list = document.getElementById("typeList");
+const qhint = document.getElementById("qhint");
+let results = [], active = -1;
+const SHOW = 40;
+function search(text){
+  const s = text.trim().toLowerCase();
+  if(!s) return {rows:[], total:0};
+  const exact = [], pre = [], sub = [];
+  for(let i=0;i<TYPES_LC.length;i++){
+    const k = TYPES_LC[i].indexOf(s);
+    if(k < 0) continue;
+    if(k === 0) (TYPES_LC[i].length === s.length ? exact : pre).push(i);
+    else sub.push([i, k]);
+  }
+  pre.sort((a,b) => TYPES_LC[a].length - TYPES_LC[b].length || (TYPES_LC[a] < TYPES_LC[b] ? -1 : 1));
+  sub.sort((a,b) => a[1]-b[1] || TYPES_LC[a[0]].length - TYPES_LC[b[0]].length || (TYPES_LC[a[0]] < TYPES_LC[b[0]] ? -1 : 1));
+  const all = exact.concat(pre, sub.map(x => x[0]));
+  return {rows: all.slice(0, SHOW).map(i => TYPES[i]), total: all.length, needle: s};
+}
+function markup(li, t, needle){
+  const span = document.createElement("span"); span.className = "t";
+  const k = t.toLowerCase().indexOf(needle);
+  if(k < 0){ span.textContent = t; return span; }
+  span.append(t.slice(0, k));
+  const m = document.createElement("mark"); m.textContent = t.slice(k, k + needle.length); span.append(m);
+  span.append(t.slice(k + needle.length));
+  return span;
+}
+function openList(open){
+  list.classList.toggle("open", open);
+  q.setAttribute("aria-expanded", open ? "true" : "false");
+  if(!open){ active = -1; q.removeAttribute("aria-activedescendant"); }
+}
+function renderList(){
+  const r = search(q.value);
+  results = r.rows; active = results.length ? 0 : -1;
+  list.innerHTML = "";
+  if(!q.value.trim()){ openList(false); return; }
+  if(!results.length){
+    const li = document.createElement("li"); li.className = "none"; li.setAttribute("role", "option");
+    li.setAttribute("aria-disabled", "true"); li.id = "opt-none"; li.textContent = T.none;
+    list.appendChild(li); openList(true); q.removeAttribute("aria-activedescendant"); return;
+  }
+  results.forEach((row, i) => {
+    const li = document.createElement("li"); li.setAttribute("role", "option"); li.id = "opt-" + i;
+    li.setAttribute("aria-selected", i === active ? "true" : "false");
+    li.appendChild(markup(li, row.t, r.needle));
+    const c = document.createElement("span"); c.className = "c"; c.textContent = T.count(row) + " · " + T.sides(row);
+    li.appendChild(c);
+    li.addEventListener("mousedown", ev => { ev.preventDefault(); choose(row); });
+    list.appendChild(li);
+  });
+  if(r.total > results.length){
+    const li = document.createElement("li"); li.className = "none"; li.setAttribute("role", "option");
+    li.setAttribute("aria-disabled", "true"); li.textContent = T.more(r.total - results.length);
+    list.appendChild(li);
+  }
+  openList(true); setActive(active);
+}
+function setActive(i){
+  active = i;
+  list.querySelectorAll('li[id^="opt-"]').forEach((li, k) => li.setAttribute("aria-selected", k === i ? "true" : "false"));
+  if(i >= 0){ const li = document.getElementById("opt-" + i); q.setAttribute("aria-activedescendant", li.id);
+    li.scrollIntoView({block:"nearest"}); }
+}
+q.addEventListener("input", renderList);
+q.addEventListener("focus", () => { if(q.value.trim() && (!sel || q.value !== sel.t)) renderList(); });
+q.addEventListener("blur", () => setTimeout(() => openList(false), 100));
+q.addEventListener("keydown", ev => {
+  const open = list.classList.contains("open");
+  if(ev.key === "ArrowDown"){ ev.preventDefault(); if(!open) renderList(); else if(results.length) setActive(Math.min(active + 1, results.length - 1)); }
+  else if(ev.key === "ArrowUp"){ ev.preventDefault(); if(open && results.length) setActive(Math.max(active - 1, 0)); }
+  else if(ev.key === "Enter"){ if(open && active >= 0 && results[active]){ ev.preventDefault(); choose(results[active]); } }
+  else if(ev.key === "Escape"){ if(open){ ev.preventDefault(); openList(false); } }
+});
+
+function choose(row){
+  sel = row; q.value = row.t; openList(false);
+  const ch = document.getElementById("chosen");
+  ch.hidden = false; ch.innerHTML = "";
+  const b = document.createElement("b"); b.textContent = row.t; ch.append(b, T.chosen(row));
+  try{ const u = new URL(location.href); u.searchParams.set("type", row.t); history.replaceState(null, "", u); }catch(e){}
+  updateSummary();
+  loadPreview(row);
+  ensureBuyButton();
+}
+
+/* ------------------------------------------------------------ preview */
+const pv = document.getElementById("pv"), cv = document.getElementById("pvCanvas");
+const pvStat = document.getElementById("pvStat"), pvEmpty = document.getElementById("pvEmpty");
+const thumbs = {};
+function paperFor(){ return neurons.length ? LS.orient(SIZES[size], neurons) : SIZES[size]; }
+function label(){ return {title: sel.t, sub: previewSub, caption: caption, drawn: neurons.length, total: sel.n}; }
+function sizeCanvas(c, paper, cssW){
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  let w = Math.round(cssW * dpr), h = Math.round(w * paper[1] / paper[0]);
+  const L = Math.max(w, h); if(L > 1800){ w = Math.round(w * 1800 / L); h = Math.round(h * 1800 / L); }
+  if(c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+}
+function blank(c, st){ const x = c.getContext("2d"); x.fillStyle = LS.BG[st]; x.fillRect(0, 0, c.width, c.height); }
+function drawMain(){
+  if(!sel || !neurons.length) return;
+  const paper = paperFor();
+  pv.classList.toggle("land", paper[0] > paper[1]);
+  cv.hidden = false; pvEmpty.hidden = true;
+  sizeCanvas(cv, paper, pv.clientWidth || 520);
+  LS.drawPoster(cv, neurons, style, {paper, label: label()});
+  cv.setAttribute("role", "img");
+  cv.setAttribute("aria-label", T.aria(sel.t, STYLE_INFO[style].name, T.sizeLabel(size)));
+}
+let thumbJob = 0;
+async function drawThumbs(){
+  const my = ++thumbJob;
+  const paper = paperFor();
+  for(const k of STYLE_KEYS){
+    const c = thumbs[k];
+    const w = c.parentNode.clientWidth || 120;
+    sizeCanvas(c, paper, w);
+    if(!neurons.length){ blank(c, k); continue; }
+  }
+  if(!neurons.length) return;
+  for(const k of STYLE_KEYS){
+    await new Promise(r => setTimeout(r, 0));
+    if(my !== thumbJob) return;
+    LS.drawPoster(thumbs[k], neurons, k, {paper, ss: 1200});
+  }
+}
+async function loadPreview(row){
+  const my = ++token;
+  neurons = []; sampleInfo = null; previewSub = "";
+  cv.hidden = true; pvEmpty.hidden = false; pvEmpty.textContent = "…";
+  drawThumbs();
+  pvStat.textContent = "";
+  let ids, sides = {};
+  try{
+    const r = await fetch(previewFile(row.t));
+    if(!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    ids = j.ids.slice(0, PREVIEW_MAX);
+    ids.forEach((id, k) => { sides[id] = (j.sd || "")[k] || "o"; });
+    if(my === token) previewSub = typeof j.s === "string" ? j.s : "";
+  }catch(e){ if(my === token){ pvEmpty.textContent = T.idsFail; } return; }
+  if(my !== token) return;
+  pvStat.textContent = T.fetching(0, ids.length, 0);
+  const got = await LS.loadSkeletons(ids, {concurrency: 4, isStale: () => my !== token,
+    onProgress: (d, n, f) => { pvStat.textContent = T.fetching(d, n, f); }});
+  if(my !== token) return;
+  if(!got.length){ pvEmpty.textContent = T.skFail; pvStat.textContent = ""; return; }
+  await new Promise(r => setTimeout(r, 0));
+  const all = LS.neuronsFrom(got);
+  neurons = LS.pruneBySide(all, sides);
+  sampleInfo = {failed: ids.length - got.length, outliers: all.length - neurons.length};
+  pvStat.textContent = T.drawn(neurons.length, row.n, sampleInfo.failed, sampleInfo.outliers) + " " + T.printIncl(row.n);
+  drawMain();
+  drawThumbs();
+}
+
+/* ------------------------------------------------------------ options */
+function radio(box, key, cur, build, onPick){
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "opt"; b.setAttribute("role", "radio"); b.dataset.k = key;
+  b.setAttribute("aria-checked", key === cur ? "true" : "false");
+  b.tabIndex = key === cur ? 0 : -1;
+  build(b);
+  b.addEventListener("click", () => onPick(key));
+  b.addEventListener("keydown", ev => {
+    const keys = [...box.children].map(x => x.dataset.k), i = keys.indexOf(key);
+    let j = -1;
+    if(ev.key === "ArrowRight" || ev.key === "ArrowDown") j = (i + 1) % keys.length;
+    if(ev.key === "ArrowLeft" || ev.key === "ArrowUp") j = (i - 1 + keys.length) % keys.length;
+    if(j >= 0){ ev.preventDefault(); onPick(keys[j]); box.children[j].focus(); }
+  });
+  box.appendChild(b);
+}
+function syncRadios(box, cur){
+  [...box.children].forEach(b => { const on = b.dataset.k === cur;
+    b.setAttribute("aria-checked", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+}
+const stylesBox = document.getElementById("styles"), sizesBox = document.getElementById("sizes");
+for(const k of STYLE_KEYS) radio(stylesBox, k, style, b => {
+  b.classList.add("sp-thumb"); b.setAttribute("aria-label", STYLE_INFO[k].name); b.title = STYLE_INFO[k].name;
+  const c = document.createElement("canvas"); c.width = 120; c.height = 160; blank(c, k);
+  const s = document.createElement("span"); s.textContent = STYLE_INFO[k].short || STYLE_INFO[k].name;
+  b.append(c, s); thumbs[k] = c;
+}, pickStyle);
+for(const k of Object.keys(SIZES)) radio(sizesBox, k, size, b => {
+  b.classList.add("size"); b.setAttribute("aria-label", T.sizeLabel(k) + ", " + T.price(PRICES_JPY[k]));
+  const d = document.createElement("span"); d.className = "d"; d.textContent = T.sizeLabel(k);
+  const m = document.createElement("span"); m.className = "m"; m.textContent = T.sizeNote[k];
+  const p = document.createElement("span"); p.className = "p"; p.textContent = T.price(PRICES_JPY[k]);
+  b.append(d, m, p);
+}, pickSize);
+function styleText(){
+  const e = document.getElementById("styleDesc"); e.innerHTML = "";
+  const b = document.createElement("b"); b.textContent = STYLE_INFO[style].name; e.append(b, STYLE_INFO[style].desc);
+}
+function pickStyle(k){ if(STYLE_KEYS.indexOf(k) < 0) return; style = k; syncRadios(stylesBox, k); styleText(); updateSummary(); drawMain(); }
+function pickSize(k){ if(!SIZES[k]) return; size = k; syncRadios(sizesBox, k); updateSummary(); drawMain(); drawThumbs(); }
+styleText();
+
+const capEl = document.getElementById("cap"), capCount = document.getElementById("capCount");
+const capErrEl = document.getElementById("capErr");
+let capT = null, captionErr = null;
+capEl.addEventListener("input", () => {
+  const c = normCaption(capEl.value);
+  captionErr = c.err; caption = c.err ? "" : c.s;
+  capCount.textContent = [...capEl.value].length + " / " + CAPTION_MAX;
+  capErrEl.textContent = c.err ? T.capErr[c.err] : ""; capErrEl.hidden = !c.err;
+  capEl.setAttribute("aria-invalid", c.err ? "true" : "false");
+  updateSummary();
+  clearTimeout(capT); capT = setTimeout(drawMain, 250);
+});
+
+function updateSummary(){
+  const s = document.getElementById("summary");
+  if(!sel){ s.textContent = T.pickFirst; return; }
+  s.innerHTML = "";
+  const txt = T.summary(sel.t, STYLE_INFO[style].name, T.sizeLabel(size), "@@", caption);
+  const [a, b2] = txt.split("@@");
+  const p = document.createElement("span"); p.className = "price"; p.textContent = T.price(PRICES_JPY[size]);
+  s.append(a, p, b2);
+}
+let resizeT = null;
+addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { drawMain(); drawThumbs(); }, 250); });
+
+/* ------------------------------------------------------------ PayPal */
+let paypalSdkLoading = null, buttonsRendered = false;
+function loadPaypalSdk(){
+  if(window.paypal) return Promise.resolve();
+  if(paypalSdkLoading) return paypalSdkLoading;
+  paypalSdkLoading = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://www.paypal.com/sdk/js?client-id=" + PAYPAL_CLIENT_ID + "&currency=JPY";
+    s.onload = resolve; s.onerror = () => { paypalSdkLoading = null; reject(new Error("sdk")); };
+    document.head.appendChild(s);
+  });
+  return paypalSdkLoading;
+}
+let ordered = null;
+async function ensureBuyButton(){
+  if(buttonsRendered) return;
+  buttonsRendered = true;
+  const el = document.getElementById("paypal-button-container");
+  const status = document.getElementById("buyStatus");
+  const panel = document.getElementById("confirmPanel");
+  const panelHead = document.getElementById("confirmHead"), panelBody = document.getElementById("confirmBody");
+  status.textContent = T.defaultStatus;
+  try{ await loadPaypalSdk(); }catch(e){ el.textContent = T.payUnavailable; buttonsRendered = false; return; }
+  window.paypal.Buttons({
+    style: { layout: "horizontal", color: "black", label: "pay", height: 40 },
+    createOrder: async () => {
+      // read the choices at click time: the buyer may change them after the button rendered
+      if(!sel) throw new Error("no cell type chosen");
+      const cap = normCaption(capEl.value);
+      if(cap.err){ status.textContent = T.capBlock; capEl.focus(); throw new Error("bad caption"); }
+      ordered = {type: sel.t, style: STYLE_KEYS.indexOf(style) >= 0 ? style : "ink",
+        size: SIZES[size] ? size : "18x24", caption: cap.s};
+      ordered.styleName = STYLE_INFO[ordered.style].name; ordered.sizeLabel = T.sizeLabel(ordered.size);
+      panel.className = "confirm-panel";
+      const res = await fetch(WORKER_URL + "/create-order", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ product: "lab", type: ordered.type, style: ordered.style,
+          size: ordered.size, caption: ordered.caption, lang: LANG })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.id) throw new Error("order create failed");
+      return data.id;
+    },
+    onApprove: async (data) => {
+      status.textContent = T.confirming;
+      let res, result = {};
+      try{
+        res = await fetch(WORKER_URL + "/capture-order", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ orderID: data.orderID })
+        });
+        result = await res.json();
+      }catch(e){ res = {ok: false}; }
+      if(res.ok && result.status === "COMPLETED"){
+        status.textContent = "";
+        panelHead.textContent = T.paid;
+        const addr = result.shipping && result.shipping.address;
+        const ol = T.orderLine(data.orderID, addr ? T.addr(addr) : null);
+        if(result.fulfillment && result.fulfillment.queued){
+          panelBody.textContent = T.queued(ordered, ol); panel.className = "confirm-panel show";
+        } else {
+          panelBody.textContent = T.manual(ordered, ol); panel.className = "confirm-panel show error";
+        }
+      } else {
+        status.textContent = "";
+        panelHead.textContent = T.wrong;
+        panelBody.textContent = T.failed(ordered || {type: sel ? sel.t : "?"});
+        panel.className = "confirm-panel show error";
+      }
+    },
+    onError: () => { status.textContent = T.startFail; }
+  }).render("#paypal-button-container");
+}
+
+/* ------------------------------------------------------------ boot */
+(async function boot(){
+  if(!LS){ qhint.textContent = T.loadFail; return; }
+  qhint.textContent = T.loading;
+  try{
+    const r = await fetch("types-index.json");
+    if(!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    TYPES = j.types.filter(x => x && typeof x.t === "string")
+      .map(x => ({t: x.t, n: +x.n || 0, l: +x.l || 0, r: +x.r || 0, m: +x.m || 0}));
+    TYPES_LC = TYPES.map(x => x.t.toLowerCase());
+  }catch(e){ qhint.textContent = T.loadFail; return; }
+  q.disabled = false;
+  qhint.textContent = T.loaded(TYPES.length);
+  let want = null;
+  try{ want = new URL(location.href).searchParams.get("type"); }catch(e){}
+  if(want){ const row = TYPES.find(x => x.t === want); if(row) choose(row); }
+})();
+</script>
+</body>
+</html>

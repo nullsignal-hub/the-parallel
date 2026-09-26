@@ -1,10 +1,13 @@
 """
-Place a DRAFT Printful order for one rendered neuron sheet.
-Used by .github/workflows/render-neuron.yml (step "Create draft Printful order").
+Place a DRAFT Printful order for one rendered neuron sheet (render-neuron.yml)
+or one LAB cell-type poster (render-type.yml, PRODUCT=lab).
+Used by the workflows' step "Create draft Printful order".
 
 Environment:
   PRINTFUL_TOKEN   store-scoped private token ("PARALLEL SELVES -- Direct Checkout")
-  BODY_ID, STYLE, ORDER_ID, CELL_TYPE
+  PRODUCT          "neuron" (default, unchanged behaviour) or "lab"
+  BODY_ID, STYLE, ORDER_ID, CELL_TYPE      (neuron)
+  CELL_TYPE, STYLE, SIZE, ORDER_ID         (lab; SIZE picks the variant, LAB_VARIANTS)
   RECIPIENT_B64    base64 JSON {name,address1,address2,city,state_code,country_code,zip,email}
   FILE_URL         public URL of the 3600x3600 PNG
   PRINTFUL_API     optional, default https://api.printful.com (tests point this at a mock)
@@ -29,15 +32,23 @@ import urllib.error
 import urllib.request
 
 VARIANT_ID = 4464            # Enhanced Matte Paper Poster (in), 12"x12"
+# LAB posters: same product (Enhanced Matte Paper Poster (in), product 1).
+# Checked against Printful's catalog API 2026-09-26: GET /products/variant/1
+# = 18"x24", /2 = 24"x36". Printful takes the file either way round.
+LAB_VARIANTS = {"18x24": 1, "24x36": 2}
 MAX_EXTERNAL_ID = 32
 
 
-def external_id_for(order_id):
-    return "neuron-" + order_id
+def external_id_for(order_id, product="neuron"):
+    # neuron: "neuron-<orderID>" / lab: "lab-<orderID>" -- both well inside 32.
+    return ("lab-" if product == "lab" else "neuron-") + order_id
 
 
 def build_order(env):
-    external_id = external_id_for(env["ORDER_ID"])
+    product = env.get("PRODUCT") or "neuron"
+    if product not in ("neuron", "lab"):
+        raise SystemExit("unknown PRODUCT %r" % product)
+    external_id = external_id_for(env["ORDER_ID"], product)
     if len(external_id) > MAX_EXTERNAL_ID:
         raise SystemExit("external_id longer than Printful's %d-character limit: %s"
                          % (MAX_EXTERNAL_ID, external_id))
@@ -45,13 +56,22 @@ def build_order(env):
     for k in ("name", "address1", "country_code", "zip"):
         if not recipient.get(k):
             raise SystemExit("recipient is missing " + k)
-    name = "PARALLEL SELVES - %s - bodyId %s - %s" % (
-        env.get("CELL_TYPE") or "neuron", env["BODY_ID"], env["STYLE"])
+    if product == "lab":
+        size = env.get("SIZE") or ""
+        if size not in LAB_VARIANTS:
+            raise SystemExit("unknown LAB size %r" % size)
+        variant = LAB_VARIANTS[size]
+        name = "PARALLEL LAB - %s - %s - %s in" % (
+            env.get("CELL_TYPE") or "cell type", env["STYLE"], size)
+    else:
+        variant = VARIANT_ID
+        name = "PARALLEL SELVES - %s - bodyId %s - %s" % (
+            env.get("CELL_TYPE") or "neuron", env["BODY_ID"], env["STYLE"])
     return {
         "external_id": external_id,
         "recipient": recipient,
         "items": [{
-            "variant_id": VARIANT_ID,
+            "variant_id": variant,
             "quantity": 1,
             "name": name[:120],
             "files": [{"type": "default", "url": env["FILE_URL"]}],

@@ -5,6 +5,9 @@ fails the run (an alert failing must not change the outcome).
 
 Environment: DISCORD_WEBHOOK_URL, URGENT ("1" pings @everyone), TITLE,
 ORDER_ID, STYLE, BODY_ID, CELL_TYPE, DRAFT_ID, FILE_URL, RUN_URL, NEXT.
+PRODUCT=lab (render-type.yml) swaps bodyId for SIZE / PAPER / CAPTION and
+uses the reference "lab-<type>-<style>-<size>-<order_id>" (Printful's
+external_id is the shorter "lab-<order_id>").
 """
 import datetime
 import json
@@ -16,16 +19,31 @@ def build_payload(env):
     urgent = env.get("URGENT") == "1"
     title = env.get("TITLE") or "render-neuron"
     g = lambda k: env.get(k) or ""                                  # noqa: E731
-    fields = [
-        ("PayPal order", g("ORDER_ID"), True),
-        ("Style", g("STYLE"), True),
-        ("bodyId / type", "%s / %s" % (g("BODY_ID"), g("CELL_TYPE") or "-"), True),
-        ("Printful draft", ("#" + g("DRAFT_ID")) if g("DRAFT_ID") else "-", True),
-        ("Reference", "neuron-%s-%s-%s" % (g("BODY_ID"), g("STYLE"), g("ORDER_ID")), False),
-        ("Print file", g("FILE_URL"), False),
-        ("Run", g("RUN_URL"), False),
-        ("Next step", g("NEXT"), False),
-    ]
+    if env.get("PRODUCT") == "lab":
+        fields = [
+            ("PayPal order", g("ORDER_ID"), True),
+            ("Style", g("STYLE"), True),
+            ("Cell type", g("CELL_TYPE") or "-", True),
+            ("Size", "%s in%s" % (g("SIZE") or "-", (" (sheet %s)" % g("PAPER")) if g("PAPER") else ""), True),
+            ("Printful draft", ("#" + g("DRAFT_ID")) if g("DRAFT_ID") else "-", True),
+            ("Caption", g("CAPTION") or "(none)", False),
+            ("Reference", "lab-%s-%s-%s-%s  (Printful external_id: lab-%s)" % (
+                g("CELL_TYPE"), g("STYLE"), g("SIZE"), g("ORDER_ID"), g("ORDER_ID")), False),
+            ("Print file", g("FILE_URL"), False),
+            ("Run", g("RUN_URL"), False),
+            ("Next step", g("NEXT"), False),
+        ]
+    else:
+        fields = [
+            ("PayPal order", g("ORDER_ID"), True),
+            ("Style", g("STYLE"), True),
+            ("bodyId / type", "%s / %s" % (g("BODY_ID"), g("CELL_TYPE") or "-"), True),
+            ("Printful draft", ("#" + g("DRAFT_ID")) if g("DRAFT_ID") else "-", True),
+            ("Reference", "neuron-%s-%s-%s" % (g("BODY_ID"), g("STYLE"), g("ORDER_ID")), False),
+            ("Print file", g("FILE_URL"), False),
+            ("Run", g("RUN_URL"), False),
+            ("Next step", g("NEXT"), False),
+        ]
     return {
         "content": ("@everyone " + title) if urgent else title,
         "allowed_mentions": {"parse": ["everyone"] if urgent else []},
